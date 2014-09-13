@@ -80,11 +80,11 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	val = (max_uV - con->min_uV) * sreg->max_reg_val /
 			(con->max_uV - con->min_uV);
 
-	regs = (__raw_readl(sreg->base_addr) & ~BM_POWER_LEVEL_TRG);
+	regs = (readl(sreg->base_addr) & ~BM_POWER_LEVEL_TRG);
 	pr_debug("%s: calculated val %d\n", __func__, val);
-	__raw_writel(val | regs, sreg->base_addr);
+	writel(val | regs, sreg->base_addr);
 	for (i = 20; i; i--) {
-		if (__raw_readl(power_sts) & BM_POWER_STS_DC_OK)
+		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			break;
 		udelay(1);
 	}
@@ -92,9 +92,9 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	if (i)
 		goto out;
 
-	__raw_writel(val | regs, sreg->base_addr);
+	writel(val | regs, sreg->base_addr);
 	for (i = 40000; i; i--) {
-		if (__raw_readl(power_sts) & BM_POWER_STS_DC_OK)
+		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			break;
 		udelay(1);
 	}
@@ -103,7 +103,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 		goto out;
 
 	for (i = 40000; i; i--) {
-		if (__raw_readl(power_sts) & BM_POWER_STS_DC_OK)
+		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			break;
 		udelay(1);
 	}
@@ -118,7 +118,7 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulation_constraints *con = &sreg->initdata->constraints;
 	int uv;
-	u32 val = __raw_readl(sreg->base_addr) & BM_POWER_LEVEL_TRG;
+	u32 val = readl(sreg->base_addr) & BM_POWER_LEVEL_TRG;
 
 	if (val > sreg->max_reg_val)
 		val = sreg->max_reg_val;
@@ -196,13 +196,13 @@ static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 
 	switch (mode) {
 	case REGULATOR_MODE_FAST:
-		val = __raw_readl(sreg->base_addr);
-		__raw_writel(val | BM_POWER_REG_MODE, sreg->base_addr);
+		val = readl(sreg->base_addr);
+		writel(val | BM_POWER_REG_MODE, sreg->base_addr);
 		break;
 
 	case REGULATOR_MODE_NORMAL:
-		val = __raw_readl(sreg->base_addr);
-		__raw_writel(val & ~BM_POWER_REG_MODE, sreg->base_addr);
+		val = readl(sreg->base_addr);
+		writel(val & ~BM_POWER_REG_MODE, sreg->base_addr);
 		break;
 
 	default:
@@ -215,7 +215,7 @@ static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 static unsigned int mxs_get_mode(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	u32 val = __raw_readl(sreg->base_addr) & BM_POWER_REG_MODE;
+	u32 val = readl(sreg->base_addr) & BM_POWER_REG_MODE;
 
 	return val ? REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL;
 }
