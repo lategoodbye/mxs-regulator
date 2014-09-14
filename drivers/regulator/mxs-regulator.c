@@ -278,6 +278,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	u64 regaddr64 = 0;
 	const u32 *regaddr_p;
 	int ret = 0;
+	const char *name;
 
 	if (!np) {
 		dev_err(dev, "missing device tree\n");
@@ -286,6 +287,9 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	initdata = of_get_regulator_init_data(dev, np);
 	if (!initdata)
+		return -EINVAL;
+
+	if (of_property_read_string(np, "regulator-name", &name))
 		return -EINVAL;
 
 	/* get device base address */
@@ -316,7 +320,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		goto fail3;
 	}
 
-	dev_info(dev, "regulator found\n");
+	dev_info(dev, "regulator %s found\n", name);
 
 	sreg = devm_kzalloc(dev, sizeof(*sreg), GFP_KERNEL);
 	if (!sreg) {
@@ -324,8 +328,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		goto fail3;
 	}
 	sreg->initdata = initdata;
-	sreg->name = kstrdup(of_get_property(np, "regulator-name", NULL),
-			     GFP_KERNEL);
+	sreg->name = name;
 	if (!sreg->name) {
 		ret = -ENOMEM;
 		goto fail3;
@@ -358,13 +361,13 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	config.driver_data = sreg;
 	config.of_node = np;
 
-	dev_dbg(dev, "probing regulator %s %d\n", sreg->name, pdev->id);
+	dev_dbg(dev, "probing regulator %s %d\n", name, pdev->id);
 
 	/* register regulator */
 	rdev = devm_regulator_register(dev, rdesc, &config);
 
 	if (IS_ERR(rdev)) {
-		dev_err(dev, "failed to register %s\n", sreg->name);
+		dev_err(dev, "failed to register %s\n", name);
 		ret = PTR_ERR(rdev);
 		goto fail4;
 	}
@@ -372,7 +375,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (sreg->max_uA) {
 		struct regulator *regu;
 
-		regu = regulator_get(NULL, sreg->name);
+		regu = regulator_get(NULL, name);
 		sreg->nb.notifier_call = reg_callback;
 		regulator_register_notifier(regu, &sreg->nb);
 	}
@@ -380,8 +383,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rdev);
 
 	return 0;
-fail4:
-	kfree(sreg->name);
 fail3:
 	iounmap(power_addr);
 fail2:
@@ -394,12 +395,10 @@ static int mxs_regulator_remove(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev = platform_get_drvdata(pdev);
 	struct mxs_regulator *sreg = rdev_get_drvdata(rdev);
-	const char *name = sreg->name;
 	void __iomem *base_addr = sreg->base_addr;
 	void __iomem *power_addr = sreg->power_addr;
 
 	regulator_unregister(rdev);
-	kfree(name);
 	iounmap(power_addr);
 	iounmap(base_addr);
 
