@@ -376,6 +376,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	spin_lock_init(&sreg->lock);
 
 	rdesc = &sreg->rdesc;
+	memset(rdesc, 0, sizeof(*rdesc));
 	rdesc->name = sreg->name;
 	rdesc->owner = THIS_MODULE;
 
