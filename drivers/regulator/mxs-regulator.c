@@ -315,7 +315,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	void __iomem *power_addr = NULL;
 	u64 regaddr64 = 0;
 	const u32 *regaddr_p;
-	int ret;
+	int ret = 0;
 
 	if (!np) {
 		dev_err(dev, "missing device tree\n");
@@ -332,12 +332,17 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return -ENXIO;
 
 	parent = of_get_parent(np);
-	if (!parent)
-		return -ENXIO;
+	if (!parent) {
+		ret = -ENXIO;
+		goto fail2;
+	}
 
 	power_addr = of_iomap(parent, 0);
-	if (!power_addr)
-		return -ENXIO;
+	of_node_put(parent);
+	if (!power_addr) {
+		ret = -ENXIO;
+		goto fail2;
+	}
 
 	regaddr_p = of_get_address(np, 0, NULL, NULL);
 	if (regaddr_p)
@@ -345,16 +350,24 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	if (!regaddr64) {
 		dev_err(dev, "no or invalid reg property set\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto fail3;
 	}
 
 	dev_info(dev, "regulator found\n");
 
 	sreg = devm_kzalloc(dev, sizeof(*sreg), GFP_KERNEL);
-	if (!sreg)
-		return -ENOMEM;
+	if (!sreg) {
+		ret = -ENOMEM;
+		goto fail3;
+	}
 	sreg->initdata = initdata;
-	sreg->name = of_get_property(np, "regulator-name", NULL);
+	sreg->name = kstrdup(of_get_property(np, "regulator-name", NULL),
+			     GFP_KERNEL);
+	if (!sreg->name) {
+		ret = -ENOMEM;
+		goto fail3;
+	}
 	sreg->cur_uA = 0;
 	sreg->cur_uV = 0;
 	sreg->base_addr = base_addr;
@@ -390,7 +403,8 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	if (IS_ERR(rdev)) {
 		dev_err(dev, "failed to register %s\n", sreg->name);
-		return PTR_ERR(rdev);
+		ret = PTR_ERR(rdev);
+		goto fail4;
 	}
 
 	if (sreg->max_uA) {
@@ -404,6 +418,14 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rdev);
 
 	return 0;
+fail4:
+	kfree(sreg->name);
+fail3:
+	iounmap(power_addr);
+fail2:
+	iounmap(base_addr);
+
+	return ret;
 }
 
 static struct of_device_id of_mxs_regulator_match_tbl[] = {
