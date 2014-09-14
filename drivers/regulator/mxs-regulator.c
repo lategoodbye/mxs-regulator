@@ -372,13 +372,15 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		goto fail4;
 	}
 
-	if (sreg->max_uA) {
+	/*
+	if (rdesc->type == REGULATOR_CURRENT) {
 		struct regulator *regu;
 
 		regu = regulator_get(NULL, name);
 		sreg->nb.notifier_call = reg_callback;
 		regulator_register_notifier(regu, &sreg->nb);
 	}
+	*/
 
 	platform_set_drvdata(pdev, rdev);
 
