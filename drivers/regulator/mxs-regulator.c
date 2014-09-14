@@ -38,7 +38,6 @@
 
 #define BM_POWER_STS_DC_OK	(1 << 9)
 #define BM_POWER_REG_MODE       (1 << 17)
-#define BM_POWER_LEVEL_TRG      0x1f
 
 #define MXS_REG5V_NOT_USB 0
 #define MXS_REG5V_IS_USB 1
@@ -79,7 +78,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	val = (max_uV - con->min_uV) * sreg->rdesc.n_voltages /
 			(con->max_uV - con->min_uV);
 
-	regs = (readl(sreg->base_addr) & ~BM_POWER_LEVEL_TRG);
+	regs = (readl(sreg->base_addr) & ~sreg->rdesc.vsel_mask);
 
 	dev_dbg(&reg->dev, "%s: calculated val %d\n", __func__, val);
 
@@ -119,7 +118,7 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulation_constraints *con = &sreg->initdata->constraints;
 	int uv;
-	u32 val = readl(sreg->base_addr) & BM_POWER_LEVEL_TRG;
+	u32 val = readl(sreg->base_addr) & sreg->rdesc.vsel_mask;
 
 	if (val > sreg->rdesc.n_voltages)
 		val = sreg->rdesc.n_voltages;
@@ -371,7 +370,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	con = &initdata->constraints;
 	rdesc->min_uV = con->min_uV;
 	rdesc->vsel_reg = regaddr64;
-	rdesc->vsel_mask = BM_POWER_LEVEL_TRG;
 
 	config.dev = &pdev->dev;
 	config.init_data = initdata;
