@@ -220,9 +220,14 @@ static unsigned int mxs_get_mode(struct regulator_dev *reg)
 	return val ? REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL;
 }
 
-static struct regulator_ops mxs_rops = {
+static struct regulator_ops mxs_vol_rops = {
 	.set_voltage	= mxs_set_voltage,
 	.get_voltage	= mxs_get_voltage,
+	.set_mode	= mxs_set_mode,
+	.get_mode	= mxs_get_mode,
+};
+
+static struct regulator_ops mxs_cur_rops = {
 	.set_current_limit	= mxs_set_current_limit,
 	.get_current_limit	= mxs_get_current_limit,
 	.set_mode	= mxs_set_mode,
@@ -360,12 +365,14 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	rdesc = &sreg->rdesc;
 	rdesc->name = sreg->name;
 	rdesc->owner = THIS_MODULE;
-	rdesc->ops = &mxs_rops;
 
-	if (strcmp(rdesc->name, "overall_current") == 0)
+	if (strcmp(rdesc->name, "overall_current") == 0) {
 		rdesc->type = REGULATOR_CURRENT;
-	else
+		rdesc->ops = &mxs_cur_rops;
+	} else {
 		rdesc->type = REGULATOR_VOLTAGE;
+		rdesc->ops = &mxs_vol_rops;
+	}
 
 	con = &initdata->constraints;
 	rdesc->min_uV = con->min_uV;
