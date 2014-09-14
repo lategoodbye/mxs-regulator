@@ -237,7 +237,7 @@ static struct regulator_desc mxs_reg_desc[] = {
 		.type = REGULATOR_CURRENT,
 		.linear_min_sel = 0,
 	},
-};	
+};
 
 static int reg_callback(struct notifier_block *self,
 			unsigned long event, void *data)
