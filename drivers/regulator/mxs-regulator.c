@@ -231,6 +231,49 @@ static struct regulator_ops mxs_rops = {
 	.get_mode	= mxs_get_mode,
 };
 
+#define MXS_VDDD	0
+#define MXS_VDDA	1
+#define MXS_VDDIO	2
+#define MXS_OVERALL_CUR	3
+
+static struct regulator_desc mxs_reg_desc[] = {
+	{
+		.name = "vddd",
+		.supply_name = "vdda",
+		.id = MXS_VDDD,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 0x1f,
+		.uV_step = 25000,
+		.linear_min_sel = 0,
+		.vsel_mask = 0x1f,
+	},
+	{
+		.name = "vdda",
+		.supply_name = "vddio",
+		.id = MXS_VDDA,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 0x1f,
+		.uV_step = 25000,
+		.linear_min_sel = 0,
+		.vsel_mask = 0x1f,
+	},
+	{
+		.name = "vddio",
+		.id = MXS_VDDIO,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 0x10,
+		.uV_step = 50000,
+		.linear_min_sel = 0,
+		.vsel_mask = 0x1f,
+	},
+	{
+		.name = "overall_current",
+		.id = MXS_OVERALL_CUR,
+		.type = REGULATOR_CURRENT,
+		.linear_min_sel = 0,
+	},
+};	
+
 static int reg_callback(struct notifier_block *self,
 			unsigned long event, void *data)
 {
