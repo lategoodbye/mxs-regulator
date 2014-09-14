@@ -381,7 +381,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (IS_ERR(rdev)) {
 		dev_err(dev, "failed to register %s\n", name);
 		ret = PTR_ERR(rdev);
-		goto fail4;
+		goto fail3;
 	}
 
 	/*
