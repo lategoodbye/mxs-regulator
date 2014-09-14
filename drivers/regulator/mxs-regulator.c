@@ -46,10 +46,8 @@
 struct mxs_regulator {
 	struct regulator_desc rdesc;
 	struct regulator_init_data *initdata;
-	struct mxs_regulator *parent;
 
-	spinlock_t         lock;
-	wait_queue_head_t  wait_q;
+	spinlock_t lock;
 	struct notifier_block nb;
 
 	const char *name;
@@ -129,55 +127,19 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	return uv;
 }
 
-static int main_add_current(struct mxs_regulator *sreg,
-			    int uA)
-{
-	pr_debug("%s: enter reg %s, uA=%d\n", __func__, sreg->name, uA);
-
-	if (uA > 0 && (sreg->cur_uA + uA > sreg->max_uA))
-		return -EINVAL;
-
-	sreg->cur_uA += uA;
-
-	return 0;
-}
-
 static int mxs_set_current_limit(struct regulator_dev *reg, int min_uA,
 				 int max_uA)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct mxs_regulator *parent = sreg->parent;
-	int ret = 0;
-	unsigned long flags;
 
 	dev_dbg(&reg->dev, "%s: enter reg %s, uA=%d\n", __func__, sreg->name,
 			  max_uA);
 
-	if (parent) {
-		spin_lock_irqsave(&parent->lock, flags);
-		ret = main_add_current(parent, max_uA - sreg->cur_uA);
-		spin_unlock_irqrestore(&parent->lock, flags);
-	}
+	if (max_uA > 0 && (max_uA > sreg->max_uA))
+		return -EINVAL;
 
-	if ((!ret) || (!parent))
-		goto out;
-
-	if (sreg->mode == REGULATOR_MODE_FAST)
-		return ret;
-
-	while (ret) {
-		wait_event(parent->wait_q ,
-			   (max_uA - sreg->cur_uA <
-			    parent->max_uA -
-			    parent->cur_uA));
-		spin_lock_irqsave(&parent->lock, flags);
-		ret = main_add_current(parent, max_uA - sreg->cur_uA);
-		spin_unlock_irqrestore(&parent->lock, flags);
-	}
-out:
-	if (parent && (max_uA - sreg->cur_uA < 0))
-		wake_up_all(&parent->wait_q);
 	sreg->cur_uA = max_uA;
+
 	return 0;
 }
 
@@ -372,7 +334,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	sreg->cur_uV = 0;
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
-	init_waitqueue_head(&sreg->wait_q);
 	spin_lock_init(&sreg->lock);
 
 	rdesc = &sreg->rdesc;
