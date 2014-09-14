@@ -60,7 +60,6 @@ struct mxs_regulator {
 	int cur_uV;
 	int cur_uA;
 	int max_uA;
-	u32 max_reg_val;
 };
 
 static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
@@ -77,7 +76,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	if (max_uV < con->min_uV || max_uV > con->max_uV)
 		return -EINVAL;
 
-	val = (max_uV - con->min_uV) * sreg->max_reg_val /
+	val = (max_uV - con->min_uV) * sreg->rdesc.n_voltages /
 			(con->max_uV - con->min_uV);
 
 	regs = (readl(sreg->base_addr) & ~BM_POWER_LEVEL_TRG);
@@ -122,11 +121,11 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	int uv;
 	u32 val = readl(sreg->base_addr) & BM_POWER_LEVEL_TRG;
 
-	if (val > sreg->max_reg_val)
-		val = sreg->max_reg_val;
+	if (val > sreg->rdesc.n_voltages)
+		val = sreg->rdesc.n_voltages;
 
 	uv = con->min_uV + val *
-		(con->max_uV - con->min_uV) / sreg->max_reg_val;
+		(con->max_uV - con->min_uV) / sreg->rdesc.n_voltages;
 
 	return uv;
 }
@@ -312,7 +311,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	void __iomem *power_addr = NULL;
 	u64 regaddr64 = 0;
 	const u32 *regaddr_p;
-	u32 val = 0;
 	int ret;
 
 	if (!np) {
@@ -346,13 +344,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (!initdata)
 		return -EINVAL;
 
-	ret = of_property_read_u32(np, "mxs-max-reg-val",
-				   &val);
-	if (!val) {
-		dev_err(dev, "no or invalid mxs-max-reg-val property set\n");
-		return ret;
-	}
-
 	dev_info(dev, "regulator found\n");
 
 	sreg = devm_kzalloc(dev, sizeof(*sreg), GFP_KERNEL);
@@ -366,7 +357,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	sreg->power_addr = power_addr;
 	init_waitqueue_head(&sreg->wait_q);
 	spin_lock_init(&sreg->lock);
-	sreg->max_reg_val = val;
 
 	rdesc = &sreg->rdesc;
 	rdesc->name = sreg->name;
@@ -379,10 +369,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		rdesc->type = REGULATOR_VOLTAGE;
 
 	con = &initdata->constraints;
-	rdesc->n_voltages = sreg->max_reg_val;
 	rdesc->min_uV = con->min_uV;
-	rdesc->uV_step = (con->max_uV - con->min_uV) / sreg->max_reg_val;
-	rdesc->linear_min_sel = 0;
 	rdesc->vsel_reg = regaddr64;
 	rdesc->vsel_mask = BM_POWER_LEVEL_TRG;
 
@@ -410,12 +397,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, rdev);
-
-	of_property_read_u32(np, "mxs-default-microvolt",
-				   &val);
-
-	if (val)
-		mxs_set_voltage(rdev, val, val, NULL);
 
 	return 0;
 }
