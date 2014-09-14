@@ -331,6 +331,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		goto fail2;
 	}
 
+	/* get base address of power controller */
 	power_addr = of_iomap(parent, 0);
 	of_node_put(parent);
 	if (!power_addr) {
@@ -375,7 +376,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	dev_dbg(dev, "probing regulator %s %d\n", name, pdev->id);
 
-	/* register regulator */
 	rdev = devm_regulator_register(dev, rdesc, &config);
 
 	if (IS_ERR(rdev)) {
