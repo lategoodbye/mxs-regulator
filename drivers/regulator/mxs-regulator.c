@@ -71,8 +71,8 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	void __iomem *power_sts = sreg->power_addr + HW_POWER_STS;
 	u32 val, regs, i;
 
-	pr_debug("%s: uv %d, min %d, max %d\n", __func__,
-		max_uV, con->min_uV, con->max_uV);
+	dev_dbg(&reg->dev, "%s: uv %d, min %d, max %d\n", __func__, max_uV,
+			   con->min_uV, con->max_uV);
 
 	if (max_uV < con->min_uV || max_uV > con->max_uV)
 		return -EINVAL;
@@ -81,7 +81,9 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 			(con->max_uV - con->min_uV);
 
 	regs = (readl(sreg->base_addr) & ~BM_POWER_LEVEL_TRG);
-	pr_debug("%s: calculated val %d\n", __func__, val);
+
+	dev_dbg(&reg->dev, "%s: calculated val %d\n", __func__, val);
+
 	writel(val | regs, sreg->base_addr);
 	for (i = 20; i; i--) {
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
@@ -150,8 +152,8 @@ static int mxs_set_current_limit(struct regulator_dev *reg, int min_uA,
 	int ret = 0;
 	unsigned long flags;
 
-	pr_debug("%s: enter reg %s, uA=%d\n",
-		 __func__, sreg->name, max_uA);
+	dev_dbg(&reg->dev, "%s: enter reg %s, uA=%d\n", __func__, sreg->name,
+			  max_uA);
 
 	if (parent) {
 		spin_lock_irqsave(&parent->lock, flags);
@@ -346,17 +348,13 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	config.driver_data = sreg;
 	config.of_node = np;
 
-	pr_debug("probing regulator %s %s %d\n",
-			sreg->name,
-			rdesc->name,
-			pdev->id);
+	dev_dbg(dev, "probing regulator %s %d\n", sreg->name, pdev->id);
 
 	/* register regulator */
 	rdev = devm_regulator_register(dev, rdesc, &config);
 
 	if (IS_ERR(rdev)) {
-		dev_err(&pdev->dev, "failed to register %s\n",
-			rdesc->name);
+		dev_err(dev, "failed to register %s\n", sreg->name);
 		return PTR_ERR(rdev);
 	}
 
