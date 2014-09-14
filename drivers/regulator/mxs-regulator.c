@@ -428,6 +428,22 @@ fail2:
 	return ret;
 }
 
+static int mxs_regulator_remove(struct platform_device *pdev)
+{
+	struct regulator_dev *rdev = platform_get_drvdata(pdev);
+	struct mxs_regulator *sreg = rdev_get_drvdata(rdev);
+	const char *name = sreg->name;
+	void __iomem *base_addr = sreg->base_addr;
+	void __iomem *power_addr = sreg->power_addr;
+
+	regulator_unregister(rdev);
+	kfree(name);
+	iounmap(power_addr);
+	iounmap(base_addr);
+
+	return 0;
+}
+
 static struct of_device_id of_mxs_regulator_match_tbl[] = {
 	{ .compatible = "fsl,mxs-regulator", },
 	{ /* end */ }
@@ -440,6 +456,7 @@ static struct platform_driver mxs_regulator_driver = {
 		.of_match_table = of_mxs_regulator_match_tbl,
 	},
 	.probe	= mxs_regulator_probe,
+	.remove = mxs_regulator_remove,
 };
 
 static int __init mxs_regulator_init(void)
