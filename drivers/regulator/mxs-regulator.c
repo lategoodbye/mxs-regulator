@@ -322,6 +322,10 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	initdata = of_get_regulator_init_data(dev, np);
+	if (!initdata)
+		return -EINVAL;
+
 	/* get device base address */
 	base_addr = of_iomap(np, 0);
 	if (!base_addr)
@@ -343,10 +347,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		dev_err(dev, "no or invalid reg property set\n");
 		return -EINVAL;
 	}
-
-	initdata = of_get_regulator_init_data(dev, np);
-	if (!initdata)
-		return -EINVAL;
 
 	dev_info(dev, "regulator found\n");
 
