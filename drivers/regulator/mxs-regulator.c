@@ -146,7 +146,7 @@ static unsigned int mxs_get_mode(struct regulator_dev *reg)
 	return val ? REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL;
 }
 
-static struct regulator_ops mxs_vol_rops = {
+static struct regulator_ops mxs_rops = {
 	.set_voltage	= mxs_set_voltage,
 	.get_voltage	= mxs_get_voltage,
 	.set_mode	= mxs_set_mode,
@@ -292,7 +292,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	rdesc->name = sreg->name;
 	rdesc->owner = THIS_MODULE;
-	rdesc->ops = &mxs_vol_rops;
+	rdesc->ops = &mxs_rops;
 
 	con = &initdata->constraints;
 	rdesc->min_uV = con->min_uV;
