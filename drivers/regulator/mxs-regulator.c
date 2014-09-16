@@ -156,6 +156,7 @@ static struct regulator_ops mxs_vol_rops = {
 #define MXS_VDDIO	1
 #define MXS_VDDA	2
 #define MXS_VDDD	3
+#define MXS_VDDMEM      4
 
 static struct regulator_desc mxs_reg_desc[] = {
 	{
@@ -179,6 +180,15 @@ static struct regulator_desc mxs_reg_desc[] = {
 	{
 		.name = "vddd",
 		.id = MXS_VDDD,
+		.type = REGULATOR_VOLTAGE,
+		.n_voltages = 0x1f,
+		.uV_step = 25000,
+		.linear_min_sel = 0,
+		.vsel_mask = 0x1f,
+	},
+	{
+		.name = "vddmem",
+		.id = MXS_VDDMEM,
 		.type = REGULATOR_VOLTAGE,
 		.n_voltages = 0x1f,
 		.uV_step = 25000,
