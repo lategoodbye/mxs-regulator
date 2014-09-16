@@ -241,23 +241,25 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	memset(rdesc, 0, sizeof(*rdesc));
 
 	for (i = 0; i < ARRAY_SIZE(mxs_reg_desc); i++) {
-		if (!strcmp(mxs_reg_desc[i].name, name)) {
-			sreg->name = name;
-			rdesc->supply_name    = mxs_reg_desc[i].supply_name;
-			rdesc->id	      = mxs_reg_desc[i].id;
-			rdesc->type	      = mxs_reg_desc[i].type;
-			rdesc->n_voltages     = mxs_reg_desc[i].n_voltages;
-			rdesc->uV_step	      = mxs_reg_desc[i].uV_step;
-			rdesc->linear_min_sel = mxs_reg_desc[i].linear_min_sel;
-			rdesc->vsel_mask      = mxs_reg_desc[i].vsel_mask;
+		if (!strcmp(mxs_reg_desc[i].name, name))
 			break;
-		}
 	}
 
 	if (i >= ARRAY_SIZE(mxs_reg_desc)) {
 		dev_err(dev, "unknown regulator %s\n", name);
 		return -EINVAL;
 	}
+
+	sreg->name = name;
+	rdesc->name = sreg->name;
+	rdesc->owner = THIS_MODULE;
+	rdesc->id = mxs_reg_desc[i].id;
+	rdesc->type = REGULATOR_VOLTAGE;
+	rdesc->linear_min_sel = mxs_reg_desc[i].linear_min_sel;
+	rdesc->n_voltages = mxs_reg_desc[i].n_voltages;
+	rdesc->uV_step = mxs_reg_desc[i].uV_step;
+	rdesc->vsel_mask = mxs_reg_desc[i].vsel_mask;
+	rdesc->ops = &mxs_rops;
 
 	/* get device base address */
 	base_addr = of_iomap(np, 0);
@@ -296,11 +298,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
-	spin_lock_init(&sreg->lock);
-
-	rdesc->name = sreg->name;
-	rdesc->owner = THIS_MODULE;
-	rdesc->ops = &mxs_rops;
+	spin_lock_init(&sreg->lock);	
 
 	con = &initdata->constraints;
 	rdesc->min_uV = con->min_uV;
