@@ -369,3 +369,4 @@ MODULE_AUTHOR("Embedded Alley Solutions <source@embeddedalley.com>");
 MODULE_AUTHOR("Stefan Wahren <stefan.wahren@i2se.com>");
 MODULE_DESCRIPTION("Freescale STMP378X voltage regulators");
 MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("platform:mxs_regulator");
