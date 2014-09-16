@@ -1,11 +1,11 @@
 MXS regulators
 
 Required node properties:
-- compatible: Should be "fsl,<soc>-power", where soc is "imx23" or "imx28"
+- compatible: Should be "simple-bus"
 - #address-cells: Number of cells required to define regulator register, 
   must be 1
-- #size-cells: Must be zero
-- reg: Absolute physical address and length of the register set for the device
+- #size-cells: Number of cells required to define register size, must be 1
+- reg: Absolute physical address and size of the register set for the device
 
 Required regulator properties:
 - compatible: Must be "fsl,mxs-regulator"
@@ -17,19 +17,20 @@ binding, defined in regulator.txt, can also be used.
 Example:
 
 	power: power@80044000 {
-		compatible = "fsl,imx28-power";
+		compatible = "simple-bus";
 		#address-cells = <1>;
-		#size-cells = <0>;
+		#size-cells = <1>;
 		reg = <0x80044000 0x2000>;
+		ranges;
 
-		reg_vddio: regulator-vddio@80044060 {
-			reg = <0x80044060>;
+		reg_vddd: regulator@80044040 {
+			reg = <0x80044040 0x10>;
 			compatible = "fsl,mxs-regulator";
-			regulator-name = "vddio";
-			regulator-min-microvolt = <2800000>;
-			regulator-max-microvolt = <3600000>;
-			regulator-microvolt-offset = <80000>;
+			regulator-name = "vddd";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1575000>;
 			regulator-boot-on;
+			vddd-supply = <&reg_vdda>;
 		};
 	};
 
