@@ -39,10 +39,6 @@
 #define BM_POWER_STS_DC_OK	(1 << 9)
 #define BM_POWER_REG_MODE       (1 << 17)
 
-#define MXS_REG5V_NOT_USB 0
-#define MXS_REG5V_IS_USB 1
-
-
 struct mxs_regulator {
 	struct regulator_desc rdesc;
 	struct regulator_init_data *initdata;
@@ -55,8 +51,6 @@ struct mxs_regulator {
 	void __iomem *power_addr;
 	int mode;
 	int cur_uV;
-	int cur_uA;
-	int max_uA;
 };
 
 static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
@@ -127,29 +121,6 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	return uv;
 }
 
-static int mxs_set_current_limit(struct regulator_dev *reg, int min_uA,
-				 int max_uA)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-
-	dev_dbg(&reg->dev, "%s: enter reg %s, uA=%d\n", __func__, sreg->name,
-			  max_uA);
-
-	if (max_uA > 0 && (max_uA > sreg->max_uA))
-		return -EINVAL;
-
-	sreg->cur_uA = max_uA;
-
-	return 0;
-}
-
-static int mxs_get_current_limit(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-
-	return sreg->cur_uA;
-}
-
 static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
@@ -189,17 +160,9 @@ static struct regulator_ops mxs_vol_rops = {
 	.get_mode	= mxs_get_mode,
 };
 
-static struct regulator_ops mxs_cur_rops = {
-	.set_current_limit	= mxs_set_current_limit,
-	.get_current_limit	= mxs_get_current_limit,
-	.set_mode	= mxs_set_mode,
-	.get_mode	= mxs_get_mode,
-};
-
 #define MXS_VDDD	0
 #define MXS_VDDA	1
 #define MXS_VDDIO	2
-#define MXS_OVERALL_CUR	3
 
 static struct regulator_desc mxs_reg_desc[] = {
 	{
@@ -231,36 +194,7 @@ static struct regulator_desc mxs_reg_desc[] = {
 		.linear_min_sel = 0,
 		.vsel_mask = 0x1f,
 	},
-	{
-		.name = "overall_current",
-		.id = MXS_OVERALL_CUR,
-		.type = REGULATOR_CURRENT,
-		.linear_min_sel = 0,
-	},
 };
-
-static int reg_callback(struct notifier_block *self,
-			unsigned long event, void *data)
-{
-	unsigned long flags;
-	struct mxs_regulator *sreg =
-		container_of(self, struct mxs_regulator , nb);
-
-	switch (event) {
-	case MXS_REG5V_IS_USB:
-		spin_lock_irqsave(&sreg->lock, flags);
-		sreg->max_uA = 500000;
-		spin_unlock_irqrestore(&sreg->lock, flags);
-		break;
-	case MXS_REG5V_NOT_USB:
-		spin_lock_irqsave(&sreg->lock, flags);
-		sreg->max_uA = 0x7fffffff;
-		spin_unlock_irqrestore(&sreg->lock, flags);
-		break;
-	}
-
-	return 0;
-}
 
 static int mxs_regulator_probe(struct platform_device *pdev)
 {
@@ -351,7 +285,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	dev_info(dev, "regulator %s found\n", name);
 
-	sreg->cur_uA = 0;
 	sreg->cur_uV = 0;
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
@@ -359,11 +292,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	rdesc->name = sreg->name;
 	rdesc->owner = THIS_MODULE;
-
-	if (rdesc->type == REGULATOR_CURRENT)
-		rdesc->ops = &mxs_cur_rops;
-	else
-		rdesc->ops = &mxs_vol_rops;
+	rdesc->ops = &mxs_vol_rops;
 
 	con = &initdata->constraints;
 	rdesc->min_uV = con->min_uV;
@@ -383,16 +312,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		ret = PTR_ERR(rdev);
 		goto fail3;
 	}
-
-	/*
-	if (rdesc->type == REGULATOR_CURRENT) {
-		struct regulator *regu;
-
-		regu = regulator_get(NULL, name);
-		sreg->nb.notifier_call = reg_callback;
-		regulator_register_notifier(regu, &sreg->nb);
-	}
-	*/
 
 	platform_set_drvdata(pdev, rdev);
 
