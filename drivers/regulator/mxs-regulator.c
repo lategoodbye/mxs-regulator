@@ -31,9 +31,6 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/slab.h>
 
-#define HW_POWER_VDDDCTRL	(0x00000040)
-#define HW_POWER_VDDACTRL	(0x00000050)
-#define HW_POWER_VDDIOCTRL	(0x00000060)
 #define HW_POWER_STS	        (0x000000c0)
 
 #define BM_POWER_STS_DC_OK	(1 << 9)
@@ -50,7 +47,6 @@ struct mxs_regulator {
 	void __iomem *base_addr;
 	void __iomem *power_addr;
 	int mode;
-	int cur_uV;
 };
 
 static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
@@ -285,7 +281,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	dev_info(dev, "regulator %s found\n", name);
 
-	sreg->cur_uV = 0;
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
 	spin_lock_init(&sreg->lock);
