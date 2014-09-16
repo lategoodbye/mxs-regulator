@@ -222,11 +222,15 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	}
 
 	initdata = of_get_regulator_init_data(dev, np);
-	if (!initdata)
+	if (!initdata) {
+		dev_err(dev, "missing regulator init data\n");
 		return -EINVAL;
+	}
 
-	if (of_property_read_string(np, "regulator-name", &name))
+	if (of_property_read_string(np, "regulator-name", &name)) {
+		dev_err(dev, "missing property regulator-name\n");
 		return -EINVAL;
+	}
 
 	sreg = devm_kzalloc(dev, sizeof(*sreg), GFP_KERNEL);
 	if (!sreg)
@@ -257,11 +261,14 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	/* get device base address */
 	base_addr = of_iomap(np, 0);
-	if (!base_addr)
+	if (!base_addr) {
+		dev_err(dev, "unable to map base addr\n");
 		return -ENXIO;
+	}
 
 	parent = of_get_parent(np);
 	if (!parent) {
+		dev_err(dev, "unable to get power controller node\n");
 		ret = -ENXIO;
 		goto fail2;
 	}
@@ -270,6 +277,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	power_addr = of_iomap(parent, 0);
 	of_node_put(parent);
 	if (!power_addr) {
+		dev_err(dev, "unable to map power controller addr\n");
 		ret = -ENXIO;
 		goto fail2;
 	}
