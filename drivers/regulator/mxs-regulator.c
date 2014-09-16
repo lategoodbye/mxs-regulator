@@ -73,31 +73,28 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	writel(val | regs, sreg->base_addr);
 	for (i = 20; i; i--) {
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
-			break;
+			return 0;
+
 		udelay(1);
 	}
-
-	if (i)
-		goto out;
 
 	writel(val | regs, sreg->base_addr);
 	for (i = 40000; i; i--) {
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
-			break;
+			return 0;
+
 		udelay(1);
 	}
-
-	if (i)
-		goto out;
 
 	for (i = 40000; i; i--) {
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
-			break;
+			return 0;
+
 		udelay(1);
 	}
 
-out:
-	return !i;
+	/* Give up */
+	return -ETIMEDOUT;
 }
 
 
