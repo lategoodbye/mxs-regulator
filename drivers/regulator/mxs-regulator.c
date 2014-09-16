@@ -160,7 +160,6 @@ static struct regulator_ops mxs_vol_rops = {
 static struct regulator_desc mxs_reg_desc[] = {
 	{
 		.name = "vddd",
-		.supply_name = "vdda",
 		.id = MXS_VDDD,
 		.type = REGULATOR_VOLTAGE,
 		.n_voltages = 0x1f,
@@ -170,7 +169,6 @@ static struct regulator_desc mxs_reg_desc[] = {
 	},
 	{
 		.name = "vdda",
-		.supply_name = "vddio",
 		.id = MXS_VDDA,
 		.type = REGULATOR_VOLTAGE,
 		.n_voltages = 0x1f,
