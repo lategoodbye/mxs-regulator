@@ -344,16 +344,17 @@ static int mxs_regulator_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id of_mxs_regulator_match_tbl[] = {
-	{ .compatible = "fsl,mxs-regulator", },
+static const struct of_device_id of_mxs_regulator_match[] = {
+	{ .compatible = "fsl,mxs-regulator" },
 	{ /* end */ }
 };
+MODULE_DEVICE_TABLE(of, of_mxs_regulator_match);
 
 static struct platform_driver mxs_regulator_driver = {
 	.driver = {
 		.name	= "mxs_regulator",
 		.owner  = THIS_MODULE,
-		.of_match_table = of_mxs_regulator_match_tbl,
+		.of_match_table = of_mxs_regulator_match,
 	},
 	.probe	= mxs_regulator_probe,
 	.remove = mxs_regulator_remove,
