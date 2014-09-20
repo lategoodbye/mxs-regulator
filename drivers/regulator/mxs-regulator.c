@@ -57,7 +57,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	void __iomem *power_sts = sreg->power_addr + HW_POWER_STS;
 	u32 val, regs, i;
 
-	dev_dbg(&reg->dev, "%s: uv %d, min %d, max %d\n", __func__, max_uV,
+	pr_debug("%s: uv %d, min %d, max %d\n", __func__, max_uV,
 			   con->min_uV, con->max_uV);
 
 	if (max_uV < con->min_uV || max_uV > con->max_uV)
@@ -68,7 +68,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 
 	regs = (readl(sreg->base_addr) & ~sreg->rdesc.vsel_mask);
 
-	dev_dbg(&reg->dev, "%s: calculated val %d\n", __func__, val);
+	pr_debug("%s: calculated val %d\n", __func__, val);
 
 	writel(val | regs, sreg->base_addr);
 	for (i = 20; i; i--) {
@@ -309,7 +309,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	config.driver_data = sreg;
 	config.of_node = np;
 
-	dev_dbg(dev, "probing regulator %s %d\n", name, pdev->id);
+	pr_debug("probing regulator %s %d\n", name, pdev->id);
 
 	rdev = devm_regulator_register(dev, rdesc, &config);
 
