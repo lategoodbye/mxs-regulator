@@ -31,9 +31,9 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/slab.h>
 
-#define HW_POWER_STS	        (0x000000c0)
+#define HW_POWER_STS			(0x000000c0)
 
-#define BM_POWER_STS_DC_OK	(1 << 9)
+#define BM_POWER_STS_DC_OK		BIT(9)
 #define BM_POWER_REG_MODE       (1 << 17)
 
 struct mxs_regulator {
@@ -80,15 +80,8 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	}
 
 	writel(val | regs, sreg->base_addr);
-	for (i = 40000; i; i--) {
+	for (i = 80000; i; i--) {
 		/* delay for normal mode */
-		if (readl(power_sts) & BM_POWER_STS_DC_OK)
-			return 0;
-
-		udelay(1);
-	}
-
-	for (i = 40000; i; i--) {
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			return 0;
 
@@ -139,6 +132,7 @@ static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 		ret = -EINVAL;
 		break;
 	}
+
 	return ret;
 }
 
@@ -266,7 +260,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (!parent) {
 		dev_err(dev, "unable to get power controller node\n");
 		ret = -ENXIO;
-		goto fail2;
+		goto fail1;
 	}
 
 	/* get base address of power controller */
@@ -275,7 +269,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (!power_addr) {
 		dev_err(dev, "unable to map power controller addr\n");
 		ret = -ENXIO;
-		goto fail2;
+		goto fail1;
 	}
 
 	regaddr_p = of_get_address(np, 0, NULL, NULL);
@@ -285,7 +279,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (!regaddr64) {
 		dev_err(dev, "no or invalid reg property set\n");
 		ret = -EINVAL;
-		goto fail3;
+		goto fail2;
 	}
 
 	dev_info(dev, "regulator %s found\n", name);
@@ -310,15 +304,15 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (IS_ERR(rdev)) {
 		dev_err(dev, "failed to register %s\n", name);
 		ret = PTR_ERR(rdev);
-		goto fail3;
+		goto fail2;
 	}
 
 	platform_set_drvdata(pdev, rdev);
 
 	return 0;
-fail3:
-	iounmap(power_addr);
 fail2:
+	iounmap(power_addr);
+fail1:
 	iounmap(base_addr);
 
 	return ret;
