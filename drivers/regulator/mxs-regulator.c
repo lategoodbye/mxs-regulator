@@ -313,7 +313,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		goto fail2;
 	}
 
-	dev_info(dev, "regulator %s found\n", name);
+	dev_info(dev, "%s found\n", name);
 
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
