@@ -34,7 +34,10 @@
 #define HW_POWER_STS			(0x000000c0)
 
 #define BM_POWER_STS_DC_OK		BIT(9)
-#define BM_POWER_REG_MODE       (1 << 17)
+
+#define MXS_VDDIO	1
+#define MXS_VDDA	2
+#define MXS_VDDD	3
 
 struct mxs_regulator {
 	struct regulator_desc rdesc;
@@ -47,6 +50,7 @@ struct mxs_regulator {
 	void __iomem *base_addr;
 	void __iomem *power_addr;
 	int mode;
+	unsigned int mode_mask;
 };
 
 static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
@@ -119,13 +123,13 @@ static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 	case REGULATOR_MODE_FAST:
 		val = readl(sreg->base_addr);
 		/* Disable stepping */
-		writel(val | BM_POWER_REG_MODE, sreg->base_addr);
+		writel(val | sreg->mode_mask, sreg->base_addr);
 		break;
 
 	case REGULATOR_MODE_NORMAL:
 		val = readl(sreg->base_addr);
 		/* Enable stepping */
-		writel(val & ~BM_POWER_REG_MODE, sreg->base_addr);
+		writel(val & ~sreg->mode_mask, sreg->base_addr);
 		break;
 
 	default:
@@ -139,7 +143,7 @@ static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 static unsigned int mxs_get_mode(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	u32 val = readl(sreg->base_addr) & BM_POWER_REG_MODE;
+	u32 val = readl(sreg->base_addr) & sreg->mode_mask;
 
 	return val ? REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL;
 }
@@ -150,10 +154,6 @@ static struct regulator_ops mxs_rops = {
 	.set_mode	= mxs_set_mode,
 	.get_mode	= mxs_get_mode,
 };
-
-#define MXS_VDDIO	1
-#define MXS_VDDA	2
-#define MXS_VDDD	3
 
 static struct regulator_desc mxs_reg_desc[] = {
 	{
@@ -248,6 +248,19 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	rdesc->uV_step = mxs_reg_desc[i].uV_step;
 	rdesc->vsel_mask = mxs_reg_desc[i].vsel_mask;
 	rdesc->ops = &mxs_rops;
+
+	switch (sreg->rdesc.id)
+	{
+		case MXS_VDDIO:
+			sreg->mode_mask = BIT(17);
+			break;
+		case MXS_VDDA:
+			sreg->mode_mask = BIT(18);
+			break;
+		case MXS_VDDD:
+			sreg->mode_mask = BIT(22);
+			break;
+	}
 
 	/* get device base address */
 	base_addr = of_iomap(np, 0);
