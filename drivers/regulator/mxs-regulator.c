@@ -72,6 +72,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 
 	writel(val | regs, sreg->base_addr);
 	for (i = 20; i; i--) {
+		/* delay for fast mode */
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			return 0;
 
@@ -80,6 +81,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 
 	writel(val | regs, sreg->base_addr);
 	for (i = 40000; i; i--) {
+		/* delay for normal mode */
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			return 0;
 
@@ -123,11 +125,13 @@ static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 	switch (mode) {
 	case REGULATOR_MODE_FAST:
 		val = readl(sreg->base_addr);
+		/* Disable stepping */
 		writel(val | BM_POWER_REG_MODE, sreg->base_addr);
 		break;
 
 	case REGULATOR_MODE_NORMAL:
 		val = readl(sreg->base_addr);
+		/* Enable stepping */
 		writel(val & ~BM_POWER_REG_MODE, sreg->base_addr);
 		break;
 
