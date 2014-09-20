@@ -156,7 +156,6 @@ static struct regulator_ops mxs_rops = {
 #define MXS_VDDIO	1
 #define MXS_VDDA	2
 #define MXS_VDDD	3
-#define MXS_VDDMEM      4
 
 static struct regulator_desc mxs_reg_desc[] = {
 	{
@@ -180,15 +179,6 @@ static struct regulator_desc mxs_reg_desc[] = {
 	{
 		.name = "vddd",
 		.id = MXS_VDDD,
-		.type = REGULATOR_VOLTAGE,
-		.n_voltages = 0x1f,
-		.uV_step = 25000,
-		.linear_min_sel = 0,
-		.vsel_mask = 0x1f,
-	},
-	{
-		.name = "vddmem",
-		.id = MXS_VDDMEM,
 		.type = REGULATOR_VOLTAGE,
 		.n_voltages = 0x1f,
 		.uV_step = 25000,
@@ -298,7 +288,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
-	spin_lock_init(&sreg->lock);	
+	spin_lock_init(&sreg->lock);
 
 	con = &initdata->constraints;
 	rdesc->min_uV = con->min_uV;
