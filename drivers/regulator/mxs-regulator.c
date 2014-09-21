@@ -261,17 +261,16 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	rdesc->enable_is_inverted = mxs_reg_desc[i].enable_is_inverted;
 	rdesc->ops = &mxs_rops;
 
-	switch (sreg->rdesc.id)
-	{
-		case MXS_VDDIO:
-			sreg->mode_mask = BIT(17);
-			break;
-		case MXS_VDDA:
-			sreg->mode_mask = BIT(18);
-			break;
-		case MXS_VDDD:
-			sreg->mode_mask = BIT(22);
-			break;
+	switch (sreg->rdesc.id) {
+	case MXS_VDDIO:
+		sreg->mode_mask = BIT(17);
+		break;
+	case MXS_VDDA:
+		sreg->mode_mask = BIT(18);
+		break;
+	case MXS_VDDD:
+		sreg->mode_mask = BIT(22);
+		break;
 	}
 
 	/* get device base address */
