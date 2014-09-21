@@ -211,7 +211,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	void __iomem *power_addr = NULL;
 	int ret = 0;
 	const char *name;
-	int i;
+	unsigned int i;
 
 	if (!np) {
 		dev_err(dev, "missing device tree\n");
