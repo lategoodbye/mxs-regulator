@@ -43,13 +43,9 @@ struct mxs_regulator {
 	struct regulator_desc rdesc;
 	struct regulator_init_data *initdata;
 
-	spinlock_t lock;
-	struct notifier_block nb;
-
 	const char *name;
 	void __iomem *base_addr;
 	void __iomem *power_addr;
-	int mode;
 	unsigned int mode_mask;
 };
 
@@ -214,8 +210,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	struct regulator_config config = { };
 	void __iomem *base_addr = NULL;
 	void __iomem *power_addr = NULL;
-	u64 regaddr64 = 0;
-	const u32 *regaddr_p;
 	int ret = 0;
 	const char *name;
 	int i;
@@ -303,25 +297,12 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		goto fail1;
 	}
 
-	regaddr_p = of_get_address(np, 0, NULL, NULL);
-	if (regaddr_p)
-		regaddr64 = of_translate_address(np, regaddr_p);
-
-	if (!regaddr64) {
-		dev_err(dev, "no or invalid reg property set\n");
-		ret = -EINVAL;
-		goto fail2;
-	}
-
 	dev_info(dev, "%s found\n", name);
 
 	sreg->base_addr = base_addr;
 	sreg->power_addr = power_addr;
-	spin_lock_init(&sreg->lock);
 
 	con = &initdata->constraints;
-	rdesc->min_uV = con->min_uV;
-	rdesc->vsel_reg = regaddr64;
 
 	config.dev = &pdev->dev;
 	config.init_data = initdata;
