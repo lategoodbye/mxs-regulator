@@ -88,7 +88,6 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 		udelay(1);
 	}
 
-	/* Give up */
 	return -ETIMEDOUT;
 }
 
