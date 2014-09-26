@@ -220,9 +220,9 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	struct device_node *np = dev->of_node;
 	struct device_node *parent;
 	struct regulator_desc *rdesc;
-	struct regulator_dev *rdev;
+	struct regulator_dev *rdev = NULL;
 	struct mxs_regulator *sreg;
-	struct regulator_init_data *initdata;
+	struct regulator_init_data *initdata = NULL;
 	struct regulation_constraints *con;
 	struct regulator_config config = { };
 	void __iomem *base_addr = NULL;
