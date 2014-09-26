@@ -58,8 +58,8 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	unsigned long start;
 	u32 val, regs, i;
 
-	pr_debug("%s: uv %d, min %d, max %d\n", __func__, max_uV,
-			   con->min_uV, con->max_uV);
+	pr_debug("%s: min_uV %d, max_uV %d, min %d, max %d\n", __func__,
+		 min_uV, max_uV, con->min_uV, con->max_uV);
 
 	if (max_uV < con->min_uV || max_uV > con->max_uV)
 		return -EINVAL;
@@ -69,7 +69,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 
 	regs = (readl(sreg->base_addr) & ~sreg->rdesc.vsel_mask);
 
-	pr_debug("%s: calculated val %d\n", __func__, val);
+	pr_debug("%s: %s calculated val %d\n", __func__, sreg->name, val);
 
 	writel(val | regs, sreg->base_addr);
 	for (i = 20; i; i--) {
@@ -104,6 +104,8 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	int uv;
 	u32 val = readl(sreg->base_addr) & sreg->rdesc.vsel_mask;
 
+	pr_debug("%s: %s register val %d\n", __func__, sreg->name, val);
+
 	if (val > sreg->rdesc.n_voltages)
 		val = sreg->rdesc.n_voltages;
 
@@ -117,6 +119,8 @@ static int mxs_is_enabled(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	u32 val = readl(sreg->base_addr) & sreg->rdesc.enable_mask;
+	
+	pr_debug("%s: %s register val %d\n", __func__, sreg->name, val);
 
 	if (sreg->rdesc.enable_is_inverted)
 		val = !val;
@@ -312,7 +316,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	config.driver_data = sreg;
 	config.of_node = np;
 
-	pr_debug("probing regulator %s %d\n", name, pdev->id);
+	pr_debug("probing regulator %s\n", name);
 
 	rdev = devm_regulator_register(dev, rdesc, &config);
 
