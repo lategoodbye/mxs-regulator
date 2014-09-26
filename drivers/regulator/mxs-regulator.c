@@ -177,7 +177,6 @@ static unsigned int mxs_get_mode(struct regulator_dev *reg)
 static struct regulator_ops mxs_rops = {
 	.set_voltage	= mxs_set_voltage,
 	.get_voltage	= mxs_get_voltage,
-	.is_enabled		= mxs_is_enabled,
 	.set_mode	= mxs_set_mode,
 	.get_mode	= mxs_get_mode,
 };
