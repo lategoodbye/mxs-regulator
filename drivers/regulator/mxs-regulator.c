@@ -55,6 +55,7 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulation_constraints *con = &sreg->initdata->constraints;
 	void __iomem *power_sts = sreg->power_addr + HW_POWER_STS;
+	unsigned long start;
 	u32 val, regs, i;
 
 	pr_debug("%s: uv %d, min %d, max %d\n", __func__, max_uV,
@@ -80,12 +81,16 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	}
 
 	writel(val | regs, sreg->base_addr);
-	for (i = 80000; i; i--) {
+	start = jiffies;
+	while (1) {
 		/* delay for normal mode */
 		if (readl(power_sts) & BM_POWER_STS_DC_OK)
 			return 0;
 
-		udelay(1);
+		if (time_after(jiffies, start +	msecs_to_jiffies(80)))
+			break;
+
+		schedule();
 	}
 
 	return -ETIMEDOUT;
