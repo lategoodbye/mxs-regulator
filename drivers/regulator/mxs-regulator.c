@@ -101,7 +101,7 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulation_constraints *con = &sreg->initdata->constraints;
-	int uv;
+	int uV;
 	u32 val = readl(sreg->base_addr) & sreg->rdesc.vsel_mask;
 
 	pr_debug("%s: %s register val %d\n", __func__, sreg->name, val);
@@ -109,10 +109,10 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	if (val > sreg->rdesc.n_voltages)
 		val = sreg->rdesc.n_voltages;
 
-	uv = con->min_uV + val *
+	uV = con->min_uV + val *
 		(con->max_uV - con->min_uV) / sreg->rdesc.n_voltages;
 
-	return uv;
+	return uV;
 }
 
 static int mxs_is_enabled(struct regulator_dev *reg)
