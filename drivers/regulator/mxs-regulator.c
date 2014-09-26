@@ -118,12 +118,23 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 static int mxs_is_enabled(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	u32 val = readl(sreg->base_addr) & sreg->rdesc.enable_mask;
-	
+	u32 val;
+
+	if (sreg->rdesc.id == MXS_VDDIO)
+		return 1;
+
+	val = readl(sreg->base_addr) & sreg->rdesc.enable_mask;
+
 	pr_debug("%s: %s register val %d\n", __func__, sreg->name, val);
 
-	if (sreg->rdesc.enable_is_inverted)
-		val = !val;
+	switch (sreg->rdesc.id) {
+	case MXS_VDDA:
+		val >>= 16;
+		break;
+	case MXS_VDDD:
+		val >>= 20;
+		break;
+	}
 
 	return val ? 1 : 0;
 }
@@ -180,8 +191,7 @@ static struct regulator_desc mxs_reg_desc[] = {
 		.uV_step = 50000,
 		.linear_min_sel = 0,
 		.vsel_mask = 0x1f,
-		.enable_mask = BIT(16),
-		.enable_is_inverted = true,
+		.enable_mask = 0,
 	},
 	{
 		.name = "vdda",
@@ -191,7 +201,7 @@ static struct regulator_desc mxs_reg_desc[] = {
 		.uV_step = 25000,
 		.linear_min_sel = 0,
 		.vsel_mask = 0x1f,
-		.enable_mask = BIT(17),
+		.enable_mask = (3 << 16),
 	},
 	{
 		.name = "vddd",
@@ -201,7 +211,7 @@ static struct regulator_desc mxs_reg_desc[] = {
 		.uV_step = 25000,
 		.linear_min_sel = 0,
 		.vsel_mask = 0x1f,
-		.enable_mask = BIT(21),
+		.enable_mask = (3 << 20),
 	},
 };
 
