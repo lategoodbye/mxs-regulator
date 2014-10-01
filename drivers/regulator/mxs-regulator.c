@@ -32,8 +32,6 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/slab.h>
 
-#define HW_POWER_STS			(0x000000c0)
-
 #define BM_POWER_STS_DC_OK		BIT(9)
 
 #define MXS_VDDIO	1
@@ -42,9 +40,7 @@
 
 struct mxs_regulator {
 	struct regulator_desc desc;
-	struct regulator_init_data *initdata;
 
-	const char *name;
 	void __iomem *base_addr;
 	void __iomem *status_addr;
 };
@@ -165,18 +161,13 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	const struct mxs_regulator *template;
 	struct device_node *np = dev->of_node;
-	struct device_node *parent;
-	struct regulator_desc *rdesc;
 	struct regulator_dev *rdev = NULL;
 	struct mxs_regulator *sreg;
 	struct regulator_init_data *initdata = NULL;
-	struct regulation_constraints *con;
 	struct regulator_config config = { };
-	int ret = 0;
 	struct resource *res;
+	int ret = 0;
 	char *pname;
-	const char *name;
-	unsigned int i;
 
 	match = of_match_device(of_mxs_regulator_match, dev);
 	if (!match) {
@@ -198,16 +189,9 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	if (of_property_read_string(np, "regulator-name", &name)) {
-		dev_err(dev, "missing property regulator-name\n");
-		return -EINVAL;
-	}
-
 	sreg = devm_kmemdup(&pdev->dev, template, sizeof(*sreg), GFP_KERNEL);
 	if (!sreg)
 		return -ENOMEM;
-
-	sreg->initdata = initdata;
 
 	pname = "base-address";
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
@@ -223,54 +207,23 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (IS_ERR(sreg->status_addr))
 		return PTR_ERR(sreg->status_addr);
 
-	dev_info(dev, "%s found\n", name);
-
-	con = &initdata->constraints;
-
 	config.dev = &pdev->dev;
 	config.init_data = initdata;
 	config.driver_data = sreg;
 	config.of_node = np;
 
-	pr_debug("probing regulator %s\n", name);
-
 	rdev = devm_regulator_register(dev, &sreg->desc, &config);
 	if (IS_ERR(rdev)) {
-		dev_err(dev, "failed to register %s\n", name);
 		ret = PTR_ERR(rdev);
-		goto fail2;
+		dev_err(dev, "%s: failed to register regulator(%d)\n",
+			__func__, ret);
+		return ret;
 	}
 
 	platform_set_drvdata(pdev, rdev);
 
 	return 0;
-fail2:
-	iounmap(power_addr);
-fail1:
-	iounmap(base_addr);
-
-	return ret;
 }
-
-static int mxs_regulator_remove(struct platform_device *pdev)
-{
-	struct regulator_dev *rdev = platform_get_drvdata(pdev);
-	struct mxs_regulator *sreg = rdev_get_drvdata(rdev);
-	void __iomem *base_addr = sreg->base_addr;
-	void __iomem *power_addr = sreg->power_addr;
-
-	regulator_unregister(rdev);
-	iounmap(power_addr);
-	iounmap(base_addr);
-
-	return 0;
-}
-
-static const struct of_device_id of_mxs_regulator_match[] = {
-	{ .compatible = "fsl,mxs-regulator" },
-	{ /* end */ }
-};
-MODULE_DEVICE_TABLE(of, of_mxs_regulator_match);
 
 static struct platform_driver mxs_regulator_driver = {
 	.driver = {
@@ -279,7 +232,6 @@ static struct platform_driver mxs_regulator_driver = {
 		.of_match_table = of_mxs_regulator_match,
 	},
 	.probe	= mxs_regulator_probe,
-	.remove = mxs_regulator_remove,
 };
 
 module_platform_driver(mxs_regulator_driver);
