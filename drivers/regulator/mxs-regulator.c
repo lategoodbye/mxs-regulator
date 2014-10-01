@@ -115,30 +115,6 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	return uV;
 }
 
-static int mxs_is_enabled(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	u32 val;
-
-	if (sreg->rdesc.id == MXS_VDDIO)
-		return 1;
-
-	val = readl(sreg->base_addr) & sreg->rdesc.enable_mask;
-
-	pr_debug("%s: %s register val %d\n", __func__, sreg->name, val);
-
-	switch (sreg->rdesc.id) {
-	case MXS_VDDA:
-		val >>= 16;
-		break;
-	case MXS_VDDD:
-		val >>= 20;
-		break;
-	}
-
-	return val ? 1 : 0;
-}
-
 static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
