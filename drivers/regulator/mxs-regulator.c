@@ -376,17 +376,7 @@ static struct platform_driver mxs_regulator_driver = {
 	.remove = mxs_regulator_remove,
 };
 
-static int __init mxs_regulator_init(void)
-{
-	return platform_driver_register(&mxs_regulator_driver);
-}
-postcore_initcall(mxs_regulator_init);
-
-static void __exit mxs_regulator_exit(void)
-{
-	platform_driver_unregister(&mxs_regulator_driver);
-}
-module_exit(mxs_regulator_exit);
+module_platform_driver(mxs_regulator_driver);
 
 MODULE_AUTHOR("Embedded Alley Solutions <source@embeddedalley.com>");
 MODULE_AUTHOR("Stefan Wahren <stefan.wahren@i2se.com>");
