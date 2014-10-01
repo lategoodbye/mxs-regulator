@@ -148,9 +148,9 @@ static const struct mxs_regulator mxs_info_vddd = {
 };
 
 static const struct of_device_id of_mxs_regulator_match[] = {
-	{ .compatible = "fsl,mxs-regulator-vddd", .data = &mxs_info_vddd},
-	{ .compatible = "fsl,mxs-regulator-vdda", .data = &mxs_info_vdda},
 	{ .compatible = "fsl,mxs-regulator-vddio", .data = &mxs_info_vddio},
+	{ .compatible = "fsl,mxs-regulator-vdda", .data = &mxs_info_vdda},
+	{ .compatible = "fsl,mxs-regulator-vddd", .data = &mxs_info_vddd},
 	{ /* end */ }
 };
 MODULE_DEVICE_TABLE(of, of_mxs_regulator_match);
