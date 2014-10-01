@@ -46,7 +46,6 @@ struct mxs_regulator {
 	const char *name;
 	void __iomem *base_addr;
 	void __iomem *power_addr;
-	unsigned int mode_mask;
 };
 
 static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
@@ -115,46 +114,9 @@ static int mxs_get_voltage(struct regulator_dev *reg)
 	return uV;
 }
 
-static int mxs_set_mode(struct regulator_dev *reg, unsigned int mode)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	int ret = 0;
-	u32 val;
-
-	switch (mode) {
-	case REGULATOR_MODE_FAST:
-		val = readl(sreg->base_addr);
-		/* Disable stepping */
-		writel(val | sreg->mode_mask, sreg->base_addr);
-		break;
-
-	case REGULATOR_MODE_NORMAL:
-		val = readl(sreg->base_addr);
-		/* Enable stepping */
-		writel(val & ~sreg->mode_mask, sreg->base_addr);
-		break;
-
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
-}
-
-static unsigned int mxs_get_mode(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	u32 val = readl(sreg->base_addr) & sreg->mode_mask;
-
-	return val ? REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL;
-}
-
 static struct regulator_ops mxs_rops = {
 	.set_voltage	= mxs_set_voltage,
 	.get_voltage	= mxs_get_voltage,
-	.set_mode	= mxs_set_mode,
-	.get_mode	= mxs_get_mode,
 };
 
 static struct regulator_desc mxs_reg_desc[] = {
@@ -253,18 +215,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	rdesc->enable_mask = mxs_reg_desc[i].enable_mask;
 	rdesc->enable_is_inverted = mxs_reg_desc[i].enable_is_inverted;
 	rdesc->ops = &mxs_rops;
-
-	switch (sreg->rdesc.id) {
-	case MXS_VDDIO:
-		sreg->mode_mask = BIT(17);
-		break;
-	case MXS_VDDA:
-		sreg->mode_mask = BIT(18);
-		break;
-	case MXS_VDDD:
-		sreg->mode_mask = BIT(22);
-		break;
-	}
 
 	/* get device base address */
 	base_addr = of_iomap(np, 0);
