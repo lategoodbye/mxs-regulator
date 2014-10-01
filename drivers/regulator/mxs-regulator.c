@@ -25,6 +25,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
@@ -103,42 +104,66 @@ static struct regulator_ops mxs_rops = {
 	.get_voltage_sel	= mxs_get_voltage_sel,
 };
 
-static struct regulator_desc mxs_reg_desc[] = {
-	{
+static const struct mxs_regulator mxs_info_vddio = {
+	.desc = {
 		.name = "vddio",
 		.id = MXS_VDDIO,
 		.type = REGULATOR_VOLTAGE,
+		.owner = THIS_MODULE,
 		.n_voltages = 0x10,
 		.uV_step = 50000,
 		.linear_min_sel = 0,
+		.min_uV = 2800000,
 		.vsel_mask = 0x1f,
-		.enable_mask = 0,
-	},
-	{
+		.ops = &mxs_rops,
+	}
+};
+
+static const struct mxs_regulator mxs_info_vdda = {
+	.desc = {
 		.name = "vdda",
 		.id = MXS_VDDA,
 		.type = REGULATOR_VOLTAGE,
+		.owner = THIS_MODULE,
 		.n_voltages = 0x1f,
 		.uV_step = 25000,
 		.linear_min_sel = 0,
+		.min_uV = 1500000,
 		.vsel_mask = 0x1f,
+		.ops = &mxs_rops,
 		.enable_mask = (3 << 16),
-	},
-	{
+	}
+};
+
+static const struct mxs_regulator mxs_info_vddd = {
+	.desc = {
 		.name = "vddd",
 		.id = MXS_VDDD,
 		.type = REGULATOR_VOLTAGE,
+		.owner = THIS_MODULE,
 		.n_voltages = 0x1f,
 		.uV_step = 25000,
 		.linear_min_sel = 0,
+		.min_uV = 800000,
 		.vsel_mask = 0x1f,
+		.ops = &mxs_rops,
 		.enable_mask = (3 << 20),
-	},
+	}
 };
+
+static const struct of_device_id of_mxs_regulator_match[] = {
+	{ .compatible = "fsl,mxs-regulator-vddd", .data = &mxs_info_vddd},
+	{ .compatible = "fsl,mxs-regulator-vdda", .data = &mxs_info_vdda},
+	{ .compatible = "fsl,mxs-regulator-vddio", .data = &mxs_info_vddio},
+	{ /* end */ }
+};
+MODULE_DEVICE_TABLE(of, of_mxs_regulator_match);
 
 static int mxs_regulator_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	const struct of_device_id *match;
+	const struct mxs_regulator *template;
 	struct device_node *np = dev->of_node;
 	struct device_node *parent;
 	struct regulator_desc *rdesc;
@@ -152,6 +177,15 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	char *pname;
 	const char *name;
 	unsigned int i;
+
+	match = of_match_device(of_mxs_regulator_match, dev);
+	if (!match) {
+		/* We do not expect this to happen */
+		dev_err(dev, "%s: Unable to match device\n", __func__);
+		return -ENODEV;
+	}
+
+	template = match->data;
 
 	if (!np) {
 		dev_err(dev, "missing device tree\n");
@@ -169,36 +203,11 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	sreg = devm_kzalloc(dev, sizeof(*sreg), GFP_KERNEL);
+	sreg = devm_kmemdup(&pdev->dev, template, sizeof(*sreg), GFP_KERNEL);
 	if (!sreg)
-		return -EINVAL;
+		return -ENOMEM;
 
 	sreg->initdata = initdata;
-	rdesc = &sreg->desc;
-	memset(rdesc, 0, sizeof(*rdesc));
-
-	for (i = 0; i < ARRAY_SIZE(mxs_reg_desc); i++) {
-		if (!strcmp(mxs_reg_desc[i].name, name))
-			break;
-	}
-
-	if (i >= ARRAY_SIZE(mxs_reg_desc)) {
-		dev_err(dev, "unknown regulator %s\n", name);
-		return -EINVAL;
-	}
-
-	sreg->name = name;
-	rdesc->name = sreg->name;
-	rdesc->owner = THIS_MODULE;
-	rdesc->id = mxs_reg_desc[i].id;
-	rdesc->type = REGULATOR_VOLTAGE;
-	rdesc->linear_min_sel = mxs_reg_desc[i].linear_min_sel;
-	rdesc->n_voltages = mxs_reg_desc[i].n_voltages;
-	rdesc->uV_step = mxs_reg_desc[i].uV_step;
-	rdesc->vsel_mask = mxs_reg_desc[i].vsel_mask;
-	rdesc->enable_mask = mxs_reg_desc[i].enable_mask;
-	rdesc->enable_is_inverted = mxs_reg_desc[i].enable_is_inverted;
-	rdesc->ops = &mxs_rops;
 
 	pname = "base-address";
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
@@ -215,9 +224,6 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return PTR_ERR(sreg->status_addr);
 
 	dev_info(dev, "%s found\n", name);
-
-	sreg->base_addr = base_addr;
-	sreg->power_addr = power_addr;
 
 	con = &initdata->constraints;
 
