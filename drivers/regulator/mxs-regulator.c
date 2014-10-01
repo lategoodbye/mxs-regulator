@@ -40,50 +40,34 @@
 #define MXS_VDDD	3
 
 struct mxs_regulator {
-	struct regulator_desc rdesc;
+	struct regulator_desc desc;
 	struct regulator_init_data *initdata;
 
 	const char *name;
 	void __iomem *base_addr;
-	void __iomem *power_addr;
+	void __iomem *status_addr;
 };
 
-static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
-			   unsigned *selector)
+static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct regulation_constraints *con = &sreg->initdata->constraints;
-	void __iomem *power_sts = sreg->power_addr + HW_POWER_STS;
 	unsigned long start;
-	u32 val, regs, i;
+	u32 regs;
 
-	pr_debug("%s: min_uV %d, max_uV %d, min %d, max %d\n", __func__,
-		 min_uV, max_uV, con->min_uV, con->max_uV);
-
-	if (max_uV < con->min_uV || max_uV > con->max_uV)
-		return -EINVAL;
-
-	val = (max_uV - con->min_uV) * sreg->rdesc.n_voltages /
-			(con->max_uV - con->min_uV);
-
-	regs = (readl(sreg->base_addr) & ~sreg->rdesc.vsel_mask);
-
-	pr_debug("%s: %s calculated val %d\n", __func__, sreg->name, val);
-
-	writel(val | regs, sreg->base_addr);
-	for (i = 20; i; i--) {
-		/* delay for fast mode */
-		if (readl(power_sts) & BM_POWER_STS_DC_OK)
-			return 0;
-
-		udelay(1);
+	if (!sreg) {
+		dev_err_ratelimited(&reg->dev, "%s: No regulator drvdata\n",
+				    __func__);
+		return -ENODEV;
 	}
 
-	writel(val | regs, sreg->base_addr);
+	pr_debug("%s: sel %u\n", __func__, sel);
+
+	regs = (readl(sreg->base_addr) & ~sreg->desc.vsel_mask);
+
+	writel(sel | regs, sreg->base_addr);
 	start = jiffies;
 	while (1) {
-		/* delay for normal mode */
-		if (readl(power_sts) & BM_POWER_STS_DC_OK)
+		if (readl(sreg->status_addr) & BM_POWER_STS_DC_OK)
 			return 0;
 
 		if (time_after(jiffies, start +	msecs_to_jiffies(80)))
@@ -95,28 +79,28 @@ static int mxs_set_voltage(struct regulator_dev *reg, int min_uV, int max_uV,
 	return -ETIMEDOUT;
 }
 
-
-static int mxs_get_voltage(struct regulator_dev *reg)
+static int mxs_get_voltage_sel(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct regulation_constraints *con = &sreg->initdata->constraints;
-	int uV;
-	u32 val = readl(sreg->base_addr) & sreg->rdesc.vsel_mask;
+	int ret;
 
-	pr_debug("%s: %s register val %d\n", __func__, sreg->name, val);
+	if (!sreg) {
+		dev_err_ratelimited(&reg->dev, "%s: No regulator drvdata\n",
+				    __func__);
+		return -ENODEV;
+	}
 
-	if (val > sreg->rdesc.n_voltages)
-		val = sreg->rdesc.n_voltages;
+	ret = readl(sreg->base_addr) & sreg->desc.vsel_mask;
 
-	uV = con->min_uV + val *
-		(con->max_uV - con->min_uV) / sreg->rdesc.n_voltages;
+	pr_debug("%s: sel %u\n", __func__, ret);
 
-	return uV;
+	return ret;
 }
 
 static struct regulator_ops mxs_rops = {
-	.set_voltage	= mxs_set_voltage,
-	.get_voltage	= mxs_get_voltage,
+	.list_voltage		= regulator_list_voltage_linear,
+	.set_voltage_sel	= mxs_set_voltage_sel,
+	.get_voltage_sel	= mxs_get_voltage_sel,
 };
 
 static struct regulator_desc mxs_reg_desc[] = {
@@ -163,9 +147,9 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	struct regulator_init_data *initdata = NULL;
 	struct regulation_constraints *con;
 	struct regulator_config config = { };
-	void __iomem *base_addr = NULL;
-	void __iomem *power_addr = NULL;
 	int ret = 0;
+	struct resource *res;
+	char *pname;
 	const char *name;
 	unsigned int i;
 
@@ -190,7 +174,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	sreg->initdata = initdata;
-	rdesc = &sreg->rdesc;
+	rdesc = &sreg->desc;
 	memset(rdesc, 0, sizeof(*rdesc));
 
 	for (i = 0; i < ARRAY_SIZE(mxs_reg_desc); i++) {
@@ -216,28 +200,19 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	rdesc->enable_is_inverted = mxs_reg_desc[i].enable_is_inverted;
 	rdesc->ops = &mxs_rops;
 
-	/* get device base address */
-	base_addr = of_iomap(np, 0);
-	if (!base_addr) {
-		dev_err(dev, "unable to map base addr\n");
-		return -ENXIO;
-	}
+	pname = "base-address";
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
+	sreg->base_addr = devm_ioremap_resource(dev, res);
+	if (IS_ERR(sreg->base_addr))
+		return PTR_ERR(sreg->base_addr);
 
-	parent = of_get_parent(np);
-	if (!parent) {
-		dev_err(dev, "unable to get power controller node\n");
-		ret = -ENXIO;
-		goto fail1;
-	}
-
-	/* get base address of power controller */
-	power_addr = of_iomap(parent, 0);
-	of_node_put(parent);
-	if (!power_addr) {
-		dev_err(dev, "unable to map power controller addr\n");
-		ret = -ENXIO;
-		goto fail1;
-	}
+	/* status register is shared between the regulators */
+	pname = "status-address";
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
+	sreg->status_addr = devm_ioremap_nocache(dev, res->start,
+						 resource_size(res));
+	if (IS_ERR(sreg->status_addr))
+		return PTR_ERR(sreg->status_addr);
 
 	dev_info(dev, "%s found\n", name);
 
@@ -253,8 +228,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	pr_debug("probing regulator %s\n", name);
 
-	rdev = devm_regulator_register(dev, rdesc, &config);
-
+	rdev = devm_regulator_register(dev, &sreg->desc, &config);
 	if (IS_ERR(rdev)) {
 		dev_err(dev, "failed to register %s\n", name);
 		ret = PTR_ERR(rdev);
