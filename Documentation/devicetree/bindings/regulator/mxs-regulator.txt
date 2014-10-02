@@ -1,36 +1,30 @@
-MXS regulators
+Regulators for Freescale MX233/MX28
 
-Required node properties:
-- compatible: Should be "simple-bus"
-- #address-cells: Number of cells required to define regulator register, 
-  must be 1
-- #size-cells: Number of cells required to define register size, must be 1
-- reg: Absolute physical address and size of the register set for the device
-
-Required regulator properties:
-- compatible: Must be "fsl,mxs-regulator"
-- reg: Absolute physical address of the register set for the regulator
+Required properties:
+- compatible:
+  - "fsl,mxs-regulator-vddd" for VDDD
+  - "fsl,mxs-regulator-vdda" for VDDA
+  - "fsl,mxs-regulator-vddio" for VDDIO
+- reg: Address and length of the register set for the device. It contains
+  the information of registers in the same order as described by reg-names
+- reg-names: Should contain the reg names
+  - "base-address"	- contains base address of regulator
+  - "status-address"	- contains status address of regulator
 
 Any regulator property defined as part of the core regulator
 binding, defined in regulator.txt, can also be used.
 
 Example:
 
-	power: power@80044000 {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <1>;
-		reg = <0x80044000 0x2000>;
-		ranges;
-
-		reg_vddd: regulator@80044040 {
-			reg = <0x80044040 0x10>;
-			compatible = "fsl,mxs-regulator";
-			regulator-name = "vddd";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <1575000>;
-			regulator-boot-on;
-			vddd-supply = <&reg_vdda>;
-		};
+	reg_vddd: regulator@80044040 {
+		reg = <0x80044040 0x10>, <0x800440c0 0x10>;
+		reg-names = "base-address", "status-address";
+		compatible = "fsl,mxs-regulator-vddd";
+		regulator-name = "vddd";
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <1575000>;
+		regulator-boot-on;
+		vddd-supply = <&reg_vdda>;
 	};
+
 
