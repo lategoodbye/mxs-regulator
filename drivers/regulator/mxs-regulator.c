@@ -51,12 +51,6 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 	unsigned long start;
 	u32 regs;
 
-	if (!sreg) {
-		dev_err_ratelimited(&reg->dev, "%s: No regulator drvdata\n",
-				    __func__);
-		return -ENODEV;
-	}
-
 	pr_debug("%s: sel %u\n", __func__, sel);
 
 	regs = (readl(sreg->base_addr) & ~sreg->desc.vsel_mask);
@@ -80,12 +74,6 @@ static int mxs_get_voltage_sel(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	int ret;
-
-	if (!sreg) {
-		dev_err_ratelimited(&reg->dev, "%s: No regulator drvdata\n",
-				    __func__);
-		return -ENODEV;
-	}
 
 	ret = readl(sreg->base_addr) & sreg->desc.vsel_mask;
 
