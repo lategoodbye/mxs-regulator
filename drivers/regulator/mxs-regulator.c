@@ -51,6 +51,7 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 	struct regulator_desc *desc = &sreg->desc;
 	unsigned long start;
 	u32 regs;
+	int uV;
 
 	if (sel >= desc->n_voltages) {
 		dev_err(&reg->dev, "%s: sel(%d) >= n_voltages(%d)\n", __func__,
@@ -58,7 +59,10 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 		return -EINVAL;
 	}
 
-	pr_debug("%s: sel %u\n", __func__, sel);
+	uV = regulator_list_voltage_linear(reg, sel);
+
+	if (uV >= 0)
+		pr_debug("%s: %s: %d mV\n", __func__, desc->name, uV / 1000);
 
 	regs = (readl(sreg->base_addr) & ~desc->vsel_mask);
 
@@ -84,11 +88,13 @@ static int mxs_get_voltage_sel(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulator_desc *desc = &sreg->desc;
-	int ret;
+	int ret, uV;
 
 	ret = readl(sreg->base_addr) & desc->vsel_mask;
+	uV = regulator_list_voltage_linear(reg, ret);
 
-	pr_debug("%s: sel %u\n", __func__, ret);
+	if (uV >= 0)
+		pr_debug("%s: %s: %d mV\n", __func__, desc->name, uV / 1000);
 
 	return ret;
 }
