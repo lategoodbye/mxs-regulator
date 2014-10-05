@@ -207,6 +207,10 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	/* status register is shared between the regulators */
 	pname = "status-address";
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
+	if (!res) {
+		dev_err(dev, "Missing '%s' IO resource\n", pname);
+		return -ENODEV;
+	}
 	sreg->status_addr = devm_ioremap_nocache(dev, res->start,
 						 resource_size(res));
 	if (IS_ERR(sreg->status_addr))
