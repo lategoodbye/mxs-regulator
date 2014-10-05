@@ -74,6 +74,9 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 		schedule();
 	}
 
+	dev_warn_ratelimited(&reg->dev, "%s: timeout status=0x%08x\n",
+				  __func__, readl(sreg->status_addr));
+
 	return -ETIMEDOUT;
 }
 
