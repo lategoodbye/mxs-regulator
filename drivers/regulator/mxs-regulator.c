@@ -48,12 +48,13 @@ struct mxs_regulator {
 static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
 	unsigned long start;
 	u32 regs;
 
 	pr_debug("%s: sel %u\n", __func__, sel);
 
-	regs = (readl(sreg->base_addr) & ~sreg->desc.vsel_mask);
+	regs = (readl(sreg->base_addr) & ~desc->vsel_mask);
 
 	writel(sel | regs, sreg->base_addr);
 	start = jiffies;
@@ -73,9 +74,10 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 static int mxs_get_voltage_sel(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
 	int ret;
 
-	ret = readl(sreg->base_addr) & sreg->desc.vsel_mask;
+	ret = readl(sreg->base_addr) & desc->vsel_mask;
 
 	pr_debug("%s: sel %u\n", __func__, ret);
 
