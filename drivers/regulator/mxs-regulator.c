@@ -52,6 +52,12 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 	unsigned long start;
 	u32 regs;
 
+	if (sel >= desc->n_voltages) {
+		dev_err(&reg->dev, "%s: sel(%d) >= n_voltages(%d)\n", __func__,
+			sel, desc->n_voltages);
+		return -EINVAL;
+	}
+
 	pr_debug("%s: sel %u\n", __func__, sel);
 
 	regs = (readl(sreg->base_addr) & ~desc->vsel_mask);
