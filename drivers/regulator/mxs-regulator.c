@@ -137,7 +137,22 @@ static struct regulator_ops mxs_rops = {
 	.is_enabled		= mxs_is_enabled,
 };
 
-static const struct mxs_regulator mxs_info_vddio = {
+static const struct mxs_regulator imx23_info_vddio = {
+	.desc = {
+		.name = "vddio",
+		.id = MXS_VDDIO,
+		.type = REGULATOR_VOLTAGE,
+		.owner = THIS_MODULE,
+		.n_voltages = 0x20,
+		.uV_step = 25000,
+		.linear_min_sel = 0,
+		.min_uV = 2800000,
+		.vsel_mask = 0x1f,
+		.ops = &mxs_rops,
+	}
+};
+
+static const struct mxs_regulator imx28_info_vddio = {
 	.desc = {
 		.name = "vddio",
 		.id = MXS_VDDIO,
@@ -185,10 +200,10 @@ static const struct mxs_regulator mxs_info_vddd = {
 };
 
 static const struct of_device_id of_mxs_regulator_match[] = {
-	{ .compatible = "fsl,imx23-vddio", .data = &mxs_info_vddio},
+	{ .compatible = "fsl,imx23-vddio", .data = &imx23_info_vddio},
 	{ .compatible = "fsl,imx23-vdda", .data = &mxs_info_vdda},
 	{ .compatible = "fsl,imx23-vddd", .data = &mxs_info_vddd},
-	{ .compatible = "fsl,imx28-vddio", .data = &mxs_info_vddio},
+	{ .compatible = "fsl,imx28-vddio", .data = &imx28_info_vddio},
 	{ .compatible = "fsl,imx28-vdda", .data = &mxs_info_vdda},
 	{ .compatible = "fsl,imx28-vddd", .data = &mxs_info_vddd},
 	{ /* end */ }
