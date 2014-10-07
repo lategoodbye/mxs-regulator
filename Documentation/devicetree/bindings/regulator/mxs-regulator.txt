@@ -1,30 +1,41 @@
-Regulators for Freescale MX233/MX28
+Regulators for Freescale MX23/MX28
 
 Required properties:
+For imx23 regulators
 - compatible:
-  - "fsl,mxs-regulator-vddd" for VDDD
-  - "fsl,mxs-regulator-vdda" for VDDA
-  - "fsl,mxs-regulator-vddio" for VDDIO
+  - "fsl,imx23-vddd" for VDDD
+  - "fsl,imx23-vdda" for VDDA
+  - "fsl,imx23-vddio" for VDDIO
+For imx28 regulators
+- compatible:
+  - "fsl,imx28-vddd" for VDDD
+  - "fsl,imx28-vdda" for VDDA
+  - "fsl,imx28-vddio" for VDDIO
 - reg: Address and length of the register set for the device. It contains
   the information of registers in the same order as described by reg-names
 - reg-names: Should contain the reg names
   - "base-address"	- contains base address of regulator
-  - "status-address"	- contains status address of regulator
+  - "v5ctrl-address"	- contains 5V control address of power subsystem
+  - "status-address"	- contains status address of power subsystem
+  
 
 Any regulator property defined as part of the core regulator
 binding, defined in regulator.txt, can also be used.
 
-Example:
+Example for imx28:
 
 	reg_vddd: regulator@80044040 {
-		reg = <0x80044040 0x10>, <0x800440c0 0x10>;
-		reg-names = "base-address", "status-address";
-		compatible = "fsl,mxs-regulator-vddd";
+		reg = <0x80044040 0x10>,
+		      <0x80044010 0x10>,
+		      <0x800440c0 0x10>;
+		reg-names = "base-address",
+			    "v5ctrl-address",
+			    "status-address";
+		compatible = "fsl,imx28-vddd";
 		regulator-name = "vddd";
-		regulator-min-microvolt = <800000>;
-		regulator-max-microvolt = <1575000>;
+		regulator-min-microvolt = <1350000>;
+		regulator-max-microvolt = <1550000>;
+		regulator-always-on;					
 		regulator-boot-on;
 		vddd-supply = <&reg_vdda>;
 	};
-
-
