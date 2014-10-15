@@ -23,7 +23,7 @@
 
 static const struct of_device_id of_mxs_power_match[] = {
 	{ .compatible = "fsl,imx23-power", },
-	{ .compatible = "fsl,imx28-power", },	
+	{ .compatible = "fsl,imx28-power", },
 	{ /* end */ }
 };
 MODULE_DEVICE_TABLE(of, of_mxs_power_match);
