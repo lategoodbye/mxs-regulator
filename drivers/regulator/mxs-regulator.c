@@ -250,7 +250,12 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 
 	pname = "base-address";
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
-	sreg->base_addr = devm_ioremap_resource(dev, res);
+	if (!res) {
+		dev_err(dev, "Missing '%s' IO resource\n", pname);
+		return -ENODEV;
+	}
+	sreg->base_addr = devm_ioremap_nocache(dev, res->start,
+						 resource_size(res));
 	if (IS_ERR(sreg->base_addr))
 		return PTR_ERR(sreg->base_addr);
 
