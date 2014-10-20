@@ -32,7 +32,10 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/slab.h>
 
+#define BM_POWER_STS_VBUSVALID0_STATUS	BIT(15)
 #define BM_POWER_STS_DC_OK		BIT(9)
+
+#define BM_POWER_5VCTRL_ILIMIT_EQ_ZERO  BIT(2)
 #define BM_POWER_5VCTRL_ENABLE_DCDC	BIT(0)
 
 #define MXS_VDDIO	1
@@ -101,40 +104,60 @@ static int mxs_get_voltage_sel(struct regulator_dev *reg)
 	return ret;
 }
 
-static int mxs_is_enabled(struct regulator_dev *reg)
+static int mxs_is_vdda_vddd_enabled(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulator_desc *desc = &sreg->desc;
-	u32 val;
+	u32 v5ctrl, status, base;
 
-	/* VDDIO is always active */
-	if (!desc->enable_mask)
+	v5ctrl = readl(sreg->v5ctrl_addr);
+	status = readl(sreg->status_addr);
+	base = readl(sreg->base_addr);
+
+	pr_debug("%s: v5ctrl=0x%08x, sts=0x%08x, base=0x%08x\n", 
+		 desc->name, v5ctrl, status, base);
+
+	if ((status & BM_POWER_STS_VBUSVALID0_STATUS) &&
+	    !(v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC))
 		return 1;
 
-	/* In case of VDD5V source and DCDC convertor is disabled
-	   VDDA and VDDD are always active. */
-	val = readl(sreg->v5ctrl_addr);
-
-	pr_debug("%s: %s: v5ctrl=0x%08x\n", __func__, desc->name, val);
-
-	if (!(val & BM_POWER_5VCTRL_ENABLE_DCDC))
+	if ((status & BM_POWER_STS_VBUSVALID0_STATUS) &&
+	    (v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC) &&
+	    (base & desc->enable_mask))
 		return 1;
 
-	val = readl(sreg->base_addr);
-
-	pr_debug("%s: %s: base=0x%08x\n", __func__, desc->name, val);
-
-	if (val & desc->enable_mask)
+	if (!(status & BM_POWER_STS_VBUSVALID0_STATUS) &&
+	    (base & desc->enable_mask))
 		return 1;
 
 	return 0;
 }
 
-static struct regulator_ops mxs_rops = {
+static int mxs_is_vddio_enabled(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+
+	if (!(readl(sreg->status_addr) & BM_POWER_STS_VBUSVALID0_STATUS))
+		return 0;
+
+	if (!(readl(sreg->v5ctrl_addr) & BM_POWER_5VCTRL_ILIMIT_EQ_ZERO))
+		return 0;
+
+	return 1;
+}
+
+static struct regulator_ops mxs_vdda_vddd_rops = {
 	.list_voltage		= regulator_list_voltage_linear,
 	.set_voltage_sel	= mxs_set_voltage_sel,
 	.get_voltage_sel	= mxs_get_voltage_sel,
-	.is_enabled		= mxs_is_enabled,
+	.is_enabled		= mxs_is_vdda_vddd_enabled,
+};
+
+static struct regulator_ops mxs_vddio_rops = {
+	.list_voltage		= regulator_list_voltage_linear,
+	.set_voltage_sel	= mxs_set_voltage_sel,
+	.get_voltage_sel	= mxs_get_voltage_sel,
+	.is_enabled		= mxs_is_vddio_enabled,
 };
 
 static const struct mxs_regulator imx23_info_vddio = {
@@ -148,7 +171,7 @@ static const struct mxs_regulator imx23_info_vddio = {
 		.linear_min_sel = 0,
 		.min_uV = 2800000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_rops,
+		.ops = &mxs_vddio_rops,
 	}
 };
 
@@ -163,7 +186,7 @@ static const struct mxs_regulator imx28_info_vddio = {
 		.linear_min_sel = 0,
 		.min_uV = 2800000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_rops,
+		.ops = &mxs_vddio_rops,
 	}
 };
 
@@ -178,7 +201,7 @@ static const struct mxs_regulator mxs_info_vdda = {
 		.linear_min_sel = 0,
 		.min_uV = 1500000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_rops,
+		.ops = &mxs_vdda_vddd_rops,
 		.enable_mask = (1 << 17),
 	}
 };
@@ -194,7 +217,7 @@ static const struct mxs_regulator mxs_info_vddd = {
 		.linear_min_sel = 0,
 		.min_uV = 800000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_rops,
+		.ops = &mxs_vdda_vddd_rops,
 		.enable_mask = (1 << 21),
 	}
 };
@@ -271,21 +294,16 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 	if (IS_ERR(sreg->status_addr))
 		return PTR_ERR(sreg->status_addr);
 
-	switch (sreg->desc.id) {
-	case MXS_VDDA:
-	case MXS_VDDD:
-		pname = "v5ctrl-address";
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
-		if (!res) {
-			dev_err(dev, "Missing '%s' IO resource\n", pname);
-			return -ENODEV;
-		}
-		sreg->v5ctrl_addr = devm_ioremap_nocache(dev, res->start,
-							 resource_size(res));
-		if (IS_ERR(sreg->v5ctrl_addr))
-			return PTR_ERR(sreg->v5ctrl_addr);
-		break;
+	pname = "v5ctrl-address";
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, pname);
+	if (!res) {
+		dev_err(dev, "Missing '%s' IO resource\n", pname);
+		return -ENODEV;
 	}
+	sreg->v5ctrl_addr = devm_ioremap_nocache(dev, res->start,
+						 resource_size(res));
+	if (IS_ERR(sreg->v5ctrl_addr))
+		return PTR_ERR(sreg->v5ctrl_addr);
 
 	config.dev = &pdev->dev;
 	config.init_data = initdata;
