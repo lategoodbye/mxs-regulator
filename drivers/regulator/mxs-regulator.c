@@ -140,7 +140,7 @@ static int mxs_is_vddio_enabled(struct regulator_dev *reg)
 	if (!(readl(sreg->status_addr) & BM_POWER_STS_VBUSVALID0_STATUS))
 		return 0;
 
-	if (!(readl(sreg->v5ctrl_addr) & BM_POWER_5VCTRL_ILIMIT_EQ_ZERO))
+	if ((readl(sreg->v5ctrl_addr) & BM_POWER_5VCTRL_ILIMIT_EQ_ZERO))
 		return 0;
 
 	return 1;
