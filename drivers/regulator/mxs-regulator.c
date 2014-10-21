@@ -149,11 +149,33 @@ static int mxs_is_vddio_enabled(struct regulator_dev *reg)
 	return 1;
 }
 
+static int mxs_vdda_vddd_enable(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
+
+	writel(desc->enable_mask, sreg->base_addr + HW_POWER_CTRL_SET);
+
+	return 1;
+}
+
+static int mxs_vdda_vddd_disable(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
+
+	writel(desc->enable_mask, sreg->base_addr + HW_POWER_CTRL_CLR);
+
+	return 1;
+}
+
 static struct regulator_ops mxs_vdda_vddd_rops = {
 	.list_voltage		= regulator_list_voltage_linear,
 	.set_voltage_sel	= mxs_set_voltage_sel,
 	.get_voltage_sel	= mxs_get_voltage_sel,
 	.is_enabled		= mxs_is_vdda_vddd_enabled,
+	.enable			= mxs_vdda_vddd_enable,
+	.disable		= mxs_vdda_vddd_disable,
 };
 
 static struct regulator_ops mxs_vddio_rops = {
