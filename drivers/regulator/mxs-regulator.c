@@ -45,6 +45,49 @@
 #define MXS_VDDA	2
 #define MXS_VDDD	3
 
+void _decode_hw_power_5vctrl(u32 value)
+{
+	pr_info("HW_POWER_5VCTRL\n");
+	pr_info("VBUSDROOP_TRSH: %x\n", (value >> 28) & 3);
+	pr_info("HEADROOM_ADJ: %x\n", (value >> 24) & 7);
+	pr_info("PWD_CHARGE_4P2: %x\n", (value >> 20) & 3);
+	pr_info("CHARGE_4P2_ILIMIT: %x\n", (value >> 12) & 0x3F);
+	pr_info("VBUSVALID_TRSH: %x\n", (value >> 8) & 7);
+	pr_info("PWDN_5VBRNOUT: %x\n", (value >> 7) & 1);
+	pr_info("ENABLE_LINREG_ILIMIT: %x\n", (value >> 6) & 1);
+	pr_info("DCDC_XFER: %x\n", (value >> 5) & 1);
+	pr_info("VBUSVALID_5VDETECT: %x\n", (value >> 4) & 1);
+	pr_info("VBUSVALID_TO_B: %x\n", (value >> 3) & 1);
+	pr_info("ILIMIT_EQ_ZERO: %x\n", (value >> 2) & 1);
+	pr_info("PWRUP_VBUS_CMPS: %x\n", (value >> 1) & 1);
+	pr_info("ENABLE_DCDC: %x\n", value & 1);
+}
+
+void _decode_hw_power_vdddctrl(u32 value)
+{
+	pr_info("HW_POWER_VDDDCTRL\n");
+	pr_info("ADJTN: %x\n", (value >> 28) & 0xf);
+	pr_info("PWDN_BRNOUT: %x\n", (value >> 23) & 1);
+	pr_info("DISABLE_STEPPING: %x\n", (value >> 22) & 1);
+	pr_info("ENABLE_LINREG: %x\n", (value >> 21) & 1);
+	pr_info("DISABLE_FET: %x\n", (value >> 20) & 1);
+	pr_info("LINREG_OFFSET: %x\n", (value >> 16) & 3);
+	pr_info("BO_OFFSET: %x\n", (value >> 8) & 7);
+	pr_info("TRG: %x\n", value & 0x1f);
+}
+
+void _decode_hw_power_vddioctrl(u32 value)
+{
+	pr_info("HW_POWER_VDDIOCTRL\n");
+	pr_info("ADJTN: %x\n", (value >> 20) & 0xf);
+	pr_info("PWDN_BRNOUT: %x\n", (value >> 18) & 1);
+	pr_info("DISABLE_STEPPING: %x\n", (value >> 17) & 1);
+	pr_info("DISABLE_FET: %x\n", (value >> 16) & 1);
+	pr_info("LINREG_OFFSET: %x\n", (value >> 12) & 3);
+	pr_info("BO_OFFSET: %x\n", (value >> 8) & 7);
+	pr_info("TRG: %x\n", value & 0x1f);
+}
+
 struct mxs_regulator {
 	struct regulator_desc desc;
 
