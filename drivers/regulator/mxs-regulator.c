@@ -183,43 +183,7 @@ static u8 get_vddio_power_source(struct regulator_dev *reg)
 	return HW_POWER_UNKNOWN_SOURCE;
 }
 
-static u8 get_vdda_power_source(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct regulator_desc *desc = &sreg->desc;
-	u32 v5ctrl, status, base, linreg;
-
-	v5ctrl = readl(sreg->v5ctrl_addr);
-	status = readl(sreg->status_addr);
-	base = readl(sreg->base_addr);
-	linreg = base & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
-
-	if (base & sreg->disable_fet_mask) {
-		if (status & BM_POWER_STS_VBUSVALID0_STATUS)
-			return HW_POWER_EXTERNAL_SOURCE_5V;
-
-		if (linreg == HW_POWER_LINREG_OFFSET_LINREG_MODE)
-			return HW_POWER_LINREG_DCDC_OFF;
-	}
-
-	if (status & BM_POWER_STS_VBUSVALID0_STATUS) {
-		if (v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC)
-			return HW_POWER_DCDC_LINREG_ON;
-
-		return HW_POWER_LINREG_DCDC_OFF;
-	}
-
-	if (linreg == HW_POWER_LINREG_OFFSET_DCDC_MODE) {
-		if (base & desc->enable_mask)
-			return HW_POWER_DCDC_LINREG_ON;
-
-		return HW_POWER_DCDC_LINREG_OFF;
-	}
-
-	return HW_POWER_UNKNOWN_SOURCE;
-}
-
-static u8 get_vddd_power_source(struct regulator_dev *reg)
+static u8 get_vdda_vddd_power_source(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulator_desc *desc = &sreg->desc;
@@ -420,7 +384,7 @@ static const struct mxs_regulator mxs_info_vdda = {
 	.disable_fet_mask = 1 << 16,
 	.linreg_offset_mask = 3 << 12,
 	.linreg_offset_shift = 12,
-	.get_power_source = get_vdda_power_source,
+	.get_power_source = get_vdda_vddd_power_source,
 };
 
 static const struct mxs_regulator mxs_info_vddd = {
@@ -440,7 +404,7 @@ static const struct mxs_regulator mxs_info_vddd = {
 	.disable_fet_mask = 1 << 20,
 	.linreg_offset_mask = 3 << 16,
 	.linreg_offset_shift = 16,
-	.get_power_source = get_vddd_power_source,
+	.get_power_source = get_vdda_vddd_power_source,
 };
 
 static const struct of_device_id of_mxs_regulator_match[] = {
