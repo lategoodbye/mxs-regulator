@@ -255,6 +255,43 @@ static u8 get_vddd_power_source(struct regulator_dev *reg)
 	return HW_POWER_UNKNOWN_SOURCE;
 }
 
+void print_power_source(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
+	u8 power_source = HW_POWER_UNKNOWN_SOURCE;
+
+	if (sreg->get_power_source)
+		power_source = sreg->get_power_source(reg);
+
+	switch (power_source) {
+	case HW_POWER_LINREG_DCDC_OFF:
+		pr_info("%s: POWER SOURCE: LINREG (DCDC OFF)\n", desc->name);
+		break;
+	case HW_POWER_LINREG_DCDC_READY:
+		pr_info("%s: POWER SOURCE: LINREG (DCDC READY)\n", desc->name);
+		break;
+	case HW_POWER_DCDC_LINREG_ON:
+		pr_info("%s: POWER SOURCE: DCDC (LINREG ON)\n", desc->name);
+		break;
+	case HW_POWER_DCDC_LINREG_OFF:
+		pr_info("%s: POWER SOURCE: DCDC (LINREG OFF)\n", desc->name);
+		break;
+	case HW_POWER_DCDC_LINREG_READY:
+		pr_info("%s: POWER SOURCE: DCDC (LINREG READY)\n", desc->name);
+		break;
+	case HW_POWER_EXTERNAL_SOURCE_5V:
+		pr_info("%s: POWER SOURCE: EXT SOURCE 5V\n", desc->name);
+		break;
+	case HW_POWER_EXTERNAL_SOURCE_BATTERY:
+		pr_info("%s: POWER SOURCE: BATTERY\n", desc->name);
+		break;
+	default:
+		pr_info("%s: POWER SOURCE: UNKNOWN\n", desc->name);
+		break;
+	}
+}
+
 static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
