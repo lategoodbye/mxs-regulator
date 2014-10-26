@@ -45,6 +45,14 @@
 #define MXS_VDDA	2
 #define MXS_VDDD	3
 
+struct mxs_regulator {
+	struct regulator_desc desc;
+
+	void __iomem *base_addr;
+	void __iomem *status_addr;
+	void __iomem *v5ctrl_addr;
+};
+
 void _decode_hw_power_5vctrl(u32 value)
 {
 	pr_info("HW_POWER_5VCTRL\n");
@@ -99,14 +107,6 @@ void _decode_hw_power_vddioctrl(u32 value)
 	pr_info("BO_OFFSET: %x\n", (value >> 8) & 7);
 	pr_info("TRG: %x\n", value & 0x1f);
 }
-
-struct mxs_regulator {
-	struct regulator_desc desc;
-
-	void __iomem *base_addr;
-	void __iomem *status_addr;
-	void __iomem *v5ctrl_addr;
-};
 
 static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 {
