@@ -162,82 +162,10 @@ static int mxs_get_voltage_sel(struct regulator_dev *reg)
 	return ret;
 }
 
-static int mxs_is_vdda_vddd_enabled(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct regulator_desc *desc = &sreg->desc;
-	u32 v5ctrl, status, base;
-
-	v5ctrl = readl(sreg->v5ctrl_addr);
-	status = readl(sreg->status_addr);
-	base = readl(sreg->base_addr);
-
-	pr_debug("%s: v5ctrl=0x%08x, sts=0x%08x, base=0x%08x\n", 
-		 desc->name, v5ctrl, status, base);
-
-	if ((status & BM_POWER_STS_VBUSVALID0_STATUS) &&
-	    !(v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC))
-		return 1;
-
-	if ((status & BM_POWER_STS_VBUSVALID0_STATUS) &&
-	    (v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC) &&
-	    (base & desc->enable_mask))
-		return 1;
-
-	if (!(status & BM_POWER_STS_VBUSVALID0_STATUS) &&
-	    (base & desc->enable_mask))
-		return 1;
-
-	return 0;
-}
-
-static int mxs_is_vddio_enabled(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-
-	if (!(readl(sreg->status_addr) & BM_POWER_STS_VBUSVALID0_STATUS))
-		return 0;
-
-	if ((readl(sreg->v5ctrl_addr) & BM_POWER_5VCTRL_ILIMIT_EQ_ZERO))
-		return 0;
-
-	return 1;
-}
-
-static int mxs_vdda_vddd_enable(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct regulator_desc *desc = &sreg->desc;
-
-	writel(desc->enable_mask, sreg->base_addr + HW_POWER_CTRL_SET);
-
-	return 1;
-}
-
-static int mxs_vdda_vddd_disable(struct regulator_dev *reg)
-{
-	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	struct regulator_desc *desc = &sreg->desc;
-
-	writel(desc->enable_mask, sreg->base_addr + HW_POWER_CTRL_CLR);
-
-	return 1;
-}
-
-static struct regulator_ops mxs_vdda_vddd_rops = {
+static struct regulator_ops mxs_rops = {
 	.list_voltage		= regulator_list_voltage_linear,
 	.set_voltage_sel	= mxs_set_voltage_sel,
 	.get_voltage_sel	= mxs_get_voltage_sel,
-	.is_enabled		= mxs_is_vdda_vddd_enabled,
-	.enable			= mxs_vdda_vddd_enable,
-	.disable		= mxs_vdda_vddd_disable,
-};
-
-static struct regulator_ops mxs_vddio_rops = {
-	.list_voltage		= regulator_list_voltage_linear,
-	.set_voltage_sel	= mxs_set_voltage_sel,
-	.get_voltage_sel	= mxs_get_voltage_sel,
-	.is_enabled		= mxs_is_vddio_enabled,
 };
 
 static const struct mxs_regulator imx23_info_vddio = {
@@ -251,7 +179,7 @@ static const struct mxs_regulator imx23_info_vddio = {
 		.linear_min_sel = 0,
 		.min_uV = 2800000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_vddio_rops,
+		.ops = &mxs_rops,
 	}
 };
 
@@ -281,7 +209,7 @@ static const struct mxs_regulator mxs_info_vdda = {
 		.linear_min_sel = 0,
 		.min_uV = 1500000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_vdda_vddd_rops,
+		.ops = &mxs_rops,
 		.enable_mask = (1 << 17),
 	}
 };
@@ -297,7 +225,7 @@ static const struct mxs_regulator mxs_info_vddd = {
 		.linear_min_sel = 0,
 		.min_uV = 800000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_vdda_vddd_rops,
+		.ops = &mxs_rops,
 		.enable_mask = (1 << 21),
 	}
 };
