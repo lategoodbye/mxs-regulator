@@ -35,6 +35,46 @@
 #define HW_POWER_CTRL_SET	(0x00000004)
 #define HW_POWER_CTRL_CLR	(0x00000008)
 
+#define HW_POWER_LINREG_OFFSET_LINREG_MODE	0
+#define HW_POWER_LINREG_OFFSET_DCDC_MODE	2
+
+/* Powered by linear regulator.  DCDC output is gated off and
+   the linreg output is equal to the target. */
+#define HW_POWER_LINREG_DCDC_OFF		1
+
+/* Powered by linear regulator.  DCDC output is not gated off
+   and is ready for the automatic hardware transistion after a 5V
+   event.  The converters are not enabled when 5V is present. LinReg output
+   is 25mV below target. */
+#define HW_POWER_LINREG_DCDC_READY		2
+
+/* Powered by DCDC converter and the LinReg is on. LinReg output
+   is 25mV below target. */
+#define HW_POWER_DCDC_LINREG_ON			3
+
+/* Powered by DCDC converter and the LinReg is off. LinReg output
+   is 25mV below target. */
+#define HW_POWER_DCDC_LINREG_OFF		4
+
+/* Powered by DCDC converter and the LinReg is ready for the
+   automatic hardware transfer.  The LinReg output is not enabled and
+   depends on the 5V presence to enable the LinRegs.  LinReg offset is 25mV
+   below target. */
+#define HW_POWER_DCDC_LINREG_READY		5
+
+/* Powered by an external source when 5V is present.  This does not
+   necessarily mean the external source is powered by 5V,but the chip needs
+   to be aware that 5V is present. */
+#define HW_POWER_EXTERNAL_SOURCE_5V		6
+
+/* Powered by an external source when 5V is not present.This doesn't
+   necessarily mean the external source is powered by the battery, but the
+   chip needs to be aware that the battery is present */
+#define HW_POWER_EXTERNAL_SOURCE_BATTERY	7
+
+/* Unknown configuration.  This is an error. */
+#define HW_POWER_UNKNOWN_SOURCE			8
+
 #define BM_POWER_STS_VBUSVALID0_STATUS	BIT(15)
 #define BM_POWER_STS_DC_OK		BIT(9)
 
@@ -47,6 +87,10 @@
 
 struct mxs_regulator {
 	struct regulator_desc desc;
+	unsigned int disable_fet_mask;
+	unsigned int linreg_offset_mask;
+	u8 linreg_offset_shift;
+	u8 (*get_power_source)(struct regulator_dev *);
 
 	void __iomem *base_addr;
 	void __iomem *status_addr;
@@ -106,6 +150,109 @@ void _decode_hw_power_vddioctrl(u32 value)
 	pr_info("LINREG_OFFSET: %x\n", (value >> 12) & 3);
 	pr_info("BO_OFFSET: %x\n", (value >> 8) & 7);
 	pr_info("TRG: %x\n", value & 0x1f);
+}
+
+static u8 get_vddio_power_source(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	u32 v5ctrl, status, base, linreg;
+
+	v5ctrl = readl(sreg->v5ctrl_addr);
+	status = readl(sreg->status_addr);
+	base = readl(sreg->base_addr);
+	linreg = base & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
+
+	if (status & BM_POWER_STS_VBUSVALID0_STATUS) {
+		if ((base & sreg->disable_fet_mask) &&
+		    (linreg == HW_POWER_LINREG_OFFSET_LINREG_MODE)) {
+			return HW_POWER_LINREG_DCDC_OFF;
+		}
+
+		if (v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC) {
+			if (linreg == HW_POWER_LINREG_OFFSET_DCDC_MODE)
+				return HW_POWER_DCDC_LINREG_ON;
+		} else {
+			if (linreg == HW_POWER_LINREG_OFFSET_LINREG_MODE)
+				return HW_POWER_LINREG_DCDC_OFF;
+		}
+	} else {
+		if (linreg == HW_POWER_LINREG_OFFSET_DCDC_MODE)
+			return HW_POWER_DCDC_LINREG_ON;
+	}
+
+	return HW_POWER_UNKNOWN_SOURCE;
+}
+
+static u8 get_vdda_power_source(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
+	u32 v5ctrl, status, base, linreg;
+
+	v5ctrl = readl(sreg->v5ctrl_addr);
+	status = readl(sreg->status_addr);
+	base = readl(sreg->base_addr);
+	linreg = base & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
+
+	if (base & sreg->disable_fet_mask) {
+		if (status & BM_POWER_STS_VBUSVALID0_STATUS)
+			return HW_POWER_EXTERNAL_SOURCE_5V;
+
+		if (linreg == HW_POWER_LINREG_OFFSET_LINREG_MODE)
+			return HW_POWER_LINREG_DCDC_OFF;
+	}
+
+	if (status & BM_POWER_STS_VBUSVALID0_STATUS) {
+		if (v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC)
+			return HW_POWER_DCDC_LINREG_ON;
+
+		return HW_POWER_LINREG_DCDC_OFF;
+	}
+
+	if (linreg == HW_POWER_LINREG_OFFSET_DCDC_MODE) {
+		if (base & desc->enable_mask)
+			return HW_POWER_DCDC_LINREG_ON;
+
+		return HW_POWER_DCDC_LINREG_OFF;
+	}
+
+	return HW_POWER_UNKNOWN_SOURCE;
+}
+
+static u8 get_vddd_power_source(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
+	u32 v5ctrl, status, base, linreg;
+
+	v5ctrl = readl(sreg->v5ctrl_addr);
+	status = readl(sreg->status_addr);
+	base = readl(sreg->base_addr);
+	linreg = base & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
+
+	if (base & sreg->disable_fet_mask) {
+		if (status & BM_POWER_STS_VBUSVALID0_STATUS)
+			return HW_POWER_EXTERNAL_SOURCE_5V;
+
+		if (linreg == HW_POWER_LINREG_OFFSET_LINREG_MODE)
+			return HW_POWER_LINREG_DCDC_OFF;
+	}
+
+	if (status & BM_POWER_STS_VBUSVALID0_STATUS) {
+		if (v5ctrl & BM_POWER_5VCTRL_ENABLE_DCDC)
+			return HW_POWER_DCDC_LINREG_ON;
+
+		return HW_POWER_LINREG_DCDC_OFF;
+	}
+
+	if (linreg == HW_POWER_LINREG_OFFSET_DCDC_MODE) {
+		if (base & desc->enable_mask)
+			return HW_POWER_DCDC_LINREG_ON;
+
+		return HW_POWER_DCDC_LINREG_OFF;
+	}
+
+	return HW_POWER_UNKNOWN_SOURCE;
 }
 
 static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
@@ -180,7 +327,11 @@ static const struct mxs_regulator imx23_info_vddio = {
 		.min_uV = 2800000,
 		.vsel_mask = 0x1f,
 		.ops = &mxs_rops,
-	}
+	},
+	.disable_fet_mask = 1 << 16,
+	.linreg_offset_mask = 3 << 12,
+	.linreg_offset_shift = 12,
+	.get_power_source = get_vddio_power_source,
 };
 
 static const struct mxs_regulator imx28_info_vddio = {
@@ -194,8 +345,12 @@ static const struct mxs_regulator imx28_info_vddio = {
 		.linear_min_sel = 0,
 		.min_uV = 2800000,
 		.vsel_mask = 0x1f,
-		.ops = &mxs_vddio_rops,
-	}
+		.ops = &mxs_rops,
+	},
+	.disable_fet_mask = 1 << 16,
+	.linreg_offset_mask = 3 << 12,
+	.linreg_offset_shift = 12,
+	.get_power_source = get_vddio_power_source,
 };
 
 static const struct mxs_regulator mxs_info_vdda = {
@@ -211,7 +366,11 @@ static const struct mxs_regulator mxs_info_vdda = {
 		.vsel_mask = 0x1f,
 		.ops = &mxs_rops,
 		.enable_mask = (1 << 17),
-	}
+	},
+	.disable_fet_mask = 1 << 16,
+	.linreg_offset_mask = 3 << 12,
+	.linreg_offset_shift = 12,
+	.get_power_source = get_vdda_power_source,
 };
 
 static const struct mxs_regulator mxs_info_vddd = {
@@ -227,7 +386,11 @@ static const struct mxs_regulator mxs_info_vddd = {
 		.vsel_mask = 0x1f,
 		.ops = &mxs_rops,
 		.enable_mask = (1 << 21),
-	}
+	},
+	.disable_fet_mask = 1 << 20,
+	.linreg_offset_mask = 3 << 16,
+	.linreg_offset_shift = 16,
+	.get_power_source = get_vddd_power_source,
 };
 
 static const struct of_device_id of_mxs_regulator_match[] = {
