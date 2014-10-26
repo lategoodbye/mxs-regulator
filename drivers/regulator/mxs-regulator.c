@@ -63,6 +63,18 @@ void _decode_hw_power_5vctrl(u32 value)
 	pr_info("ENABLE_DCDC: %x\n", value & 1);
 }
 
+void _decode_hw_power_vddactrl(u32 value)
+{
+	pr_info("HW_POWER_VDDACTRL\n");
+	pr_info("PWDN_BRNOUT: %x\n", (value >> 19) & 1);
+	pr_info("DISABLE_STEPPING: %x\n", (value >> 18) & 1);
+	pr_info("ENABLE_LINREG: %x\n", (value >> 17) & 1);
+	pr_info("DISABLE_FET: %x\n", (value >> 16) & 1);
+	pr_info("LINREG_OFFSET: %x\n", (value >> 12) & 3);
+	pr_info("BO_OFFSET: %x\n", (value >> 8) & 7);
+	pr_info("TRG: %x\n", value & 0x1f);
+}
+
 void _decode_hw_power_vdddctrl(u32 value)
 {
 	pr_info("HW_POWER_VDDDCTRL\n");
