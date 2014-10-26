@@ -299,6 +299,7 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 	unsigned long start;
 	u32 regs;
 	int uV;
+	u8 power_source = HW_POWER_UNKNOWN_SOURCE;
 
 	if (sel >= desc->n_voltages) {
 		dev_err(&reg->dev, "%s: sel(%d) >= n_voltages(%d)\n", __func__,
@@ -312,14 +313,26 @@ static int mxs_set_voltage_sel(struct regulator_dev *reg, unsigned sel)
 		pr_debug("%s: %s: %d mV\n", __func__, desc->name, uV / 1000);
 
 	regs = (readl(sreg->base_addr) & ~desc->vsel_mask);
-
 	writel(sel | regs, sreg->base_addr);
+
+	if (sreg->get_power_source)
+		power_source = sreg->get_power_source(reg);
+
+	switch (power_source) {
+	case HW_POWER_LINREG_DCDC_OFF:
+	case HW_POWER_LINREG_DCDC_READY:
+	case HW_POWER_EXTERNAL_SOURCE_5V:
+		msleep(1000);
+		return 0;
+	}
+
+	usleep_range(15000, 20000);
 	start = jiffies;
 	while (1) {
 		if (readl(sreg->status_addr) & BM_POWER_STS_DC_OK)
 			return 0;
 
-		if (time_after(jiffies, start +	msecs_to_jiffies(80)))
+		if (time_after(jiffies, start +	msecs_to_jiffies(20000)))
 			break;
 
 		schedule();
