@@ -325,6 +325,7 @@ static int mxs_get_voltage_sel(struct regulator_dev *reg)
 
 static struct regulator_ops mxs_rops = {
 	.list_voltage		= regulator_list_voltage_linear,
+	.map_voltage		= regulator_map_voltage_linear,
 	.set_voltage_sel	= mxs_set_voltage_sel,
 	.get_voltage_sel	= mxs_get_voltage_sel,
 };
