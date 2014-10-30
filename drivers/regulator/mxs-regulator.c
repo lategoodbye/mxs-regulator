@@ -426,6 +426,33 @@ static const struct of_device_id of_mxs_regulator_match[] = {
 };
 MODULE_DEVICE_TABLE(of, of_mxs_regulator_match);
 
+static void regulator_init(struct regulator_dev *reg)
+{
+	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
+	struct regulator_desc *desc = &sreg->desc;
+	u32 base = readl(sreg->base_addr);
+	u8 linreg = get_linreg_offset(sreg, base);
+	u8 power_source = HW_POWER_UNKNOWN_SOURCE;
+
+	if (sreg->get_power_source)
+		power_source = sreg->get_power_source(reg);
+
+	/* Check for possible LinReg and DC-DC contention */
+	if (linreg < HW_POWER_LINREG_OFFSET_DCDC_MODE) {
+		switch (power_source) {
+		case HW_POWER_DCDC_LINREG_ON:
+		case HW_POWER_DCDC_LINREG_READY:
+		case HW_POWER_EXTERNAL_SOURCE_5V:
+			base &= ~sreg->linreg_offset_mask;
+			base |= HW_POWER_LINREG_OFFSET_DCDC_MODE;
+			writel(base, sreg->base_addr);
+			dev_warn(&reg->dev, "%s: Set LinReg offset below DCDC target\n",
+					    desc->name);
+			break;
+		}
+	}
+}
+
 static int mxs_regulator_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -511,6 +538,7 @@ static int mxs_regulator_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	regulator_init(rdev);
 	platform_set_drvdata(pdev, rdev);
 
 	return 0;
