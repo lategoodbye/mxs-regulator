@@ -416,12 +416,12 @@ static const struct mxs_regulator mxs_info_vddd = {
 };
 
 static const struct of_device_id of_mxs_regulator_match[] = {
-	{ .compatible = "fsl,imx23-vddio", .data = &imx23_info_vddio},
-	{ .compatible = "fsl,imx23-vdda", .data = &mxs_info_vdda},
-	{ .compatible = "fsl,imx23-vddd", .data = &mxs_info_vddd},
-	{ .compatible = "fsl,imx28-vddio", .data = &imx28_info_vddio},
-	{ .compatible = "fsl,imx28-vdda", .data = &mxs_info_vdda},
-	{ .compatible = "fsl,imx28-vddd", .data = &mxs_info_vddd},
+	{ .compatible = "fsl,imx23-vddio", .data = &imx23_info_vddio },
+	{ .compatible = "fsl,imx23-vdda",  .data = &mxs_info_vdda },
+	{ .compatible = "fsl,imx23-vddd",  .data = &mxs_info_vddd },
+	{ .compatible = "fsl,imx28-vddio", .data = &imx28_info_vddio },
+	{ .compatible = "fsl,imx28-vdda",  .data = &mxs_info_vdda },
+	{ .compatible = "fsl,imx28-vddd",  .data = &mxs_info_vddd },
 	{ /* end */ }
 };
 MODULE_DEVICE_TABLE(of, of_mxs_regulator_match);
