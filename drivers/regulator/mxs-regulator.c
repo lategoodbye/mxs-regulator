@@ -152,15 +152,21 @@ void _decode_hw_power_vddioctrl(u32 value)
 	pr_info("TRG: %x\n", value & 0x1f);
 }
 
+static inline u8 get_linreg_offset(struct mxs_regulator *sreg, u32 regs)
+{
+	return regs & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
+}
+
 static u8 get_vddio_power_source(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
-	u32 v5ctrl, status, base, linreg;
+	u32 v5ctrl, status, base;
+	u8 linreg;
 
 	v5ctrl = readl(sreg->v5ctrl_addr);
 	status = readl(sreg->status_addr);
 	base = readl(sreg->base_addr);
-	linreg = base & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
+	linreg = get_linreg_offset(sreg, base);
 
 	if (status & BM_POWER_STS_VBUSVALID0_STATUS) {
 		if ((base & sreg->disable_fet_mask) &&
@@ -187,12 +193,13 @@ static u8 get_vdda_vddd_power_source(struct regulator_dev *reg)
 {
 	struct mxs_regulator *sreg = rdev_get_drvdata(reg);
 	struct regulator_desc *desc = &sreg->desc;
-	u32 v5ctrl, status, base, linreg;
+	u32 v5ctrl, status, base;
+	u8 linreg;
 
 	v5ctrl = readl(sreg->v5ctrl_addr);
 	status = readl(sreg->status_addr);
 	base = readl(sreg->base_addr);
-	linreg = base & sreg->linreg_offset_mask >> sreg->linreg_offset_shift;
+	linreg = get_linreg_offset(sreg, base);
 
 	if (base & sreg->disable_fet_mask) {
 		if (status & BM_POWER_STS_VBUSVALID0_STATUS)
