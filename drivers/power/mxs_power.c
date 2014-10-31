@@ -26,6 +26,21 @@
 #include <linux/power_supply.h>
 #include <linux/types.h>
 
+#define HW_POWER_CTRL_SET	(0x00000004)
+#define HW_POWER_CTRL_CLR	(0x00000008)
+
+#define BM_POWER_CTRL_POLARITY_VBUSVALID	(1 << 5)
+#define BM_POWER_CTRL_VBUSVALID_IRQ		(1 << 4)
+#define BM_POWER_CTRL_ENIRQ_VBUS_VALID		(1 << 3)
+
+#define HW_POWER_5VCTRL_OFFSET	0x10
+
+#define BM_POWER_5VCTRL_VBUSVALID_THRESH	(7 << 8)
+#define BM_POWER_5VCTRL_PWDN_5VBRNOUT		(1 << 7)
+#define BM_POWER_5VCTRL_VBUSVALID_5VDETECT	(1 << 4)
+
+#define HW_POWER_5VCTRL_VBUSVALID_THRESH_4_40V	(5 << 8)
+
 struct mxs_power_data {
 	void __iomem *base_addr;
 	int irq;
