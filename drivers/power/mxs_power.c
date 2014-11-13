@@ -65,7 +65,7 @@ struct mxs_power_data {
 	struct power_supply dc;
 };
 
-int get_dcdc_src_frequency(struct mxs_power_data *pdata)
+int get_dcdc_clk_freq(struct mxs_power_data *pdata)
 {
 	void __iomem *base = pdata->base_addr;
 	int ret = -EINVAL;
@@ -73,6 +73,7 @@ int get_dcdc_src_frequency(struct mxs_power_data *pdata)
 
 	val = readl(base + HW_POWER_MISC_OFFSET);
 
+	/* XTAL */
 	if ((val & HW_POWER_MISC_SEL_PLLCLK) == 0)
 		return 24000;
 
@@ -91,7 +92,7 @@ int get_dcdc_src_frequency(struct mxs_power_data *pdata)
 	return ret;
 }
 
-int set_dcdc_pll_frequency(struct mxs_power_data *pdata, int kHz)
+int set_dcdc_clk_freq(struct mxs_power_data *pdata, int kHz)
 {
 	void __iomem *misc = pdata->base_addr + HW_POWER_MISC_OFFSET;
 	u32 val;
@@ -124,7 +125,7 @@ int set_dcdc_pll_frequency(struct mxs_power_data *pdata, int kHz)
 	/* First program FREQSEL */
 	writel(val, misc);
 
-	/* then use PLL clock as source for DC-DC converter */
+	/* then set PLL as clk for DC-DC converter */
 	writel(val | HW_POWER_MISC_SEL_PLLCLK, misc);
 
 	return 0;
@@ -179,7 +180,7 @@ static int mxs_power_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct mxs_power_data *data;
 	int ret;
-	int dcdc_src_freq;
+	int dcdc_clk_freq;
 
 	if (!np) {
 		dev_err(dev, "missing device tree\n");
@@ -219,11 +220,11 @@ static int mxs_power_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, data);
 
 	if (dcdc_pll)
-		set_dcdc_pll_frequency(data, dcdc_pll);
+		set_dcdc_clk_freq(data, dcdc_pll);
 
-	dcdc_src_freq = get_dcdc_src_frequency(data);
+	dcdc_clk_freq = get_dcdc_clk_freq(data);
 
-	dev_info(dev, "DCDC source freq: %d kHz\n", dcdc_src_freq);
+	dev_info(dev, "DCDC clock freq: %d kHz\n", dcdc_clk_freq);
 
 	return of_platform_populate(np, NULL, NULL, dev);
 }
