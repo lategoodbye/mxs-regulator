@@ -431,8 +431,14 @@ static void regulator_init(struct regulator_dev *reg)
 	u8 linreg = get_linreg_offset(sreg, base);
 	u8 power_source = HW_POWER_UNKNOWN_SOURCE;
 
-	if (sreg->get_power_source)
+	if (sreg->get_power_source) {
 		power_source = sreg->get_power_source(reg);
+
+		if (power_source == HW_POWER_UNKNOWN_SOURCE) {
+			dev_warn(&reg->dev, "%s: Invalid power source config\n",
+					    desc->name);
+		}
+	}
 
 	/* According to AN4199 avoid possible LinReg and DC-DC contention */
 	if (linreg < HW_POWER_LINREG_OFFSET_DCDC_MODE) {
