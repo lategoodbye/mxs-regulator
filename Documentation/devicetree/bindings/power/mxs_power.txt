@@ -3,7 +3,7 @@ Power subsystem for Freescale MX23/MX28
 Required properties:
 - compatible:
   - "fsl,imx23-power" for MX23
-  - "fsl,imx23-vdda" for MX28
+  - "fsl,imx28-power" for MX28
 - address-cells: should be 1
 - size-cells: should be 1
 - reg: Address and length of the register set for the power subsystem.
