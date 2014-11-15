@@ -32,9 +32,6 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/slab.h>
 
-#define HW_POWER_CTRL_SET	(0x00000004)
-#define HW_POWER_CTRL_CLR	(0x00000008)
-
 #define HW_POWER_LINREG_OFFSET_LINREG_MODE	0
 #define HW_POWER_LINREG_OFFSET_DCDC_MODE	2
 
