@@ -434,7 +434,7 @@ static void regulator_init(struct regulator_dev *reg)
 	if (sreg->get_power_source)
 		power_source = sreg->get_power_source(reg);
 
-	/* Check for possible LinReg and DC-DC contention */
+	/* According to AN4199 avoid possible LinReg and DC-DC contention */
 	if (linreg < HW_POWER_LINREG_OFFSET_DCDC_MODE) {
 		switch (power_source) {
 		case HW_POWER_DCDC_LINREG_ON:
@@ -443,7 +443,7 @@ static void regulator_init(struct regulator_dev *reg)
 			base &= ~sreg->linreg_offset_mask;
 			base |= HW_POWER_LINREG_OFFSET_DCDC_MODE;
 			writel(base, sreg->base_addr);
-			dev_warn(&reg->dev, "%s: Set LinReg offset below DCDC target\n",
+			dev_info(&reg->dev, "%s: Set LinReg offset below DCDC target\n",
 					    desc->name);
 			break;
 		}
